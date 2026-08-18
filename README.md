@@ -1,58 +1,27 @@
-# OUR — Layer 0 Kernstruktur (iki1uc)
+# [ABC] · Puzzle-Dreieck · Layer 0
 
-OUR ist die Ausgangsebene für gemeinsame Struktur.  
-Es bildet den Nullpunkt, an dem alle Module andocken.
+kein Anfang  
+kein Ende  
+aber wir streben.
 
----
+Dieses Repository ist ein Puzzle-Dreieck.
+Es trägt nur drei Buchstaben: [ABC].
+Mehr braucht es nicht, denn die Struktur ist universalis.
 
-## Zweck
+## Puzzle-Rolle
+Dieses Dreieck ist ein Teil des Axiom-Triolets.
+Es wird später in einem anderen index.html verwoben.
+Es trägt keine Bewegung, sondern nur Identität.
 
-OUR stellt die Basis bereit, auf der weitere Elemente entstehen.  
-Es ist kein Ergebnis, keine Reaktion, keine Führung.  
-Es ist der gemeinsame Ursprung.
-
----
+## Puzzle-Tag
+<div class="puzzle" data-piece="[ABC]"></div>
 
 ## Struktur
+ID.html   – Mitte  
+index.html – Darstellung  
+README.md – Erklärung
 
-- ID.html — Signatur der OUR‑Ebene  
-- index.html — Anzeige der Kernform  
-- README.md — Beschreibung der Ausgangsebene
-
----
-
-## Prinzip
-
-OUR folgt dem Nullpunkt‑Prinzip:
-
-Start → Form → Übergang
-
-Es besitzt keine Transformation wie ICE (C F E).  
-Es dient als Ausgangsfläche für Module wie:
-
-- [ICE](ca://s?q=ICE_Element_definieren)  
-- [4u](ca://s?q=4u_Element_erklaeren)  
-- [AQUA](ca://s?q=AQUA_Element_System_aktivieren)
-
----
-
-## Verbindung
-
-OUR ist die Basis für:
-
-- ATOM  
-- VECTOR  
-- USER  
-- ICE  
-- 4u  
-- AQUA  
-
-Es stellt die Fläche bereit, auf der diese Elemente arbeiten.
-
----
-
-## Status
-
-OUR ist aktiv, sobald die Ebene geladen wird.  
-Es besitzt keine eigene Pipeline.  
-Es dient als Ausgangspunkt für alle weiteren Schritte.
+Drei Dateien.  
+Drei Buchstaben.  
+Ein Dreieck.  
+Fluid. Offen. Bereit.
