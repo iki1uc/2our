@@ -1,4 +1,4 @@
-# [ABC] · Puzzle-Dreieck · Layer 0
+# [2our] · Puzzle-Dreieck · Layer 0
 
 kein Anfang  
 kein Ende  
