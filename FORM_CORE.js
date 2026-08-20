@@ -1,3 +1,5 @@
+// FORM_CORE.js – Basis-Matrix für FORM_ENGINE
+
 export const FORM_CORE = [
   { etage: "1–27", modul: "BIO", aufgabe: "Lebenszeichen, ECO‑Unit" },
   { etage: "81", modul: "FIELD", aufgabe: "Wirkung, ECO‑Feld" },
