@@ -1,61 +1,37 @@
 <script type="module">
 
-// ─────────────────────────────────────────────
-// 1) MODULE IMPORTIEREN
-// ─────────────────────────────────────────────
+// ─── 1) MODULE IMPORTIEREN ─────────────────────────────
 
-import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
-import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
 import { FORM_CORE } from "./FORM_CORE.js";
+import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
+import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
 
-// ─────────────────────────────────────────────
-// 2) GLOBALE ENGINE-EINGABEN
-// ─────────────────────────────────────────────
+// ─── 2) ENGINE-EINGABEN (GLOBAL) ───────────────────────
 
-window.mia = {
-    fusion: 60,
-    pulse: 0.6,
-    charge: 0.4
-};
+const ion = { pulse: 0.8, warp: 0.3, charge: 0.5 };
+const echo = { resonance: 0.7, state: "loud", warp: 0.2 };
+const mia = { fusion: 60, pulse: 0.6, charge: 0.4 };
 
-window.echo = {
-    resonance: 0.7,
-    state: "loud",
-    warp: 0.2
-};
-
-window.ion = {
-    pulse: 0.8,
-    warp: 0.3,
-    charge: 0.5
-};
-
-// ─────────────────────────────────────────────
-// 3) RUN 8 – PIPELINE + AIR6D
-// ─────────────────────────────────────────────
+// ─── 3) RUN 8 – PIPELINE + AIR6D ───────────────────────
 
 function RUN8() {
 
     const input = {
-        ion: window.ion,
-        echo: window.echo,
-        mia: window.mia,
+        ion,
+        echo,
+        mia,
         formCore: FORM_CORE,
         t: performance.now() / 1000
     };
 
-    // Pipeline
     const run8 = PIPELINE_RUN8(input);
     console.log("RUN8:", run8);
 
-    // AIR6D Move
     const air6d = AIR6D_MOVE(input);
     console.log("AIR6D:", air6d);
 }
 
-// ─────────────────────────────────────────────
-// 4) BUTTON BINDING
-// ─────────────────────────────────────────────
+// ─── 4) BUTTON BINDING ──────────────────────────────────
 
 document.querySelector("#run8").addEventListener("click", RUN8);
 
