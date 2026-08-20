@@ -1,41 +1,993 @@
-function run8() {
-  const t = performance.now() / 1000;
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ FOGth · EVOlution · SUPER ENGINE</title>
 
-  const input = {
-    ion,
-    echo,
-    mia,
-    formCore: FORM_CORE,
-    t
-  };
+<style>
+  :root {
+    --bg: #0a0a12;
+    --fg: #0f0;
+    --tri: #f44;
+    --form: #4f4;
+    --quant: #f4f;
+    --syn: #4ff;
+    --vector: #ff4;
+    --border: #1a1a2a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Consolas', 'Courier New', monospace;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 6px;
+    padding: 10px;
+  }
 
-  // Berechnung
-  const run8Result = PIPELINE_RUN8(input);
-  const air6dResult = AIR6D_MOVE(input);
+  /* HEADER */
+  header {
+    border-bottom: 2px solid var(--tri);
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  header h1 {
+    font-size: 18px;
+    background: linear-gradient(90deg, var(--tri), var(--form), var(--quant), var(--syn), var(--vector));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #status-led {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #333;
+    transition: 0.3s;
+  }
+  #status-led.on { background: #0f0; box-shadow: 0 0 20px #0f0; }
+  #status-led.off { background: #f00; }
+  #status-led.busy { background: #ff0; animation: blink 0.5s infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
 
-  // Ausgabe
-  output.textContent = JSON.stringify({
-    RUN8: run8Result,
-    AIR6D: air6dResult
-  }, null, 2);
-  output.classList.add("show");
+  /* MAIN LAYOUT */
+  main {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 8px;
+    min-height: 500px;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
 
-  // ─────────────────────────────────────────────
-  // VISUELLE EINBINDUNG IN HYPEPER
-  // ─────────────────────────────────────────────
+  /* CANVAS PANEL */
+  #canvas-panel {
+    background: #05050a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+  }
+  #canvas-panel .header {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  #canvas-panel .header h3 { color: var(--tri); font-size: 12px; }
+  #canvas-panel .header span { font-size: 10px; color: #666; }
+  #canvas-wrap {
+    flex: 1;
+    background: #000;
+    border-radius: 4px;
+    overflow: hidden;
+    min-height: 250px;
+    position: relative;
+  }
+  #canvas-wrap canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
 
-  // Glow abhängig von AIR6D Sync
-  HYPEPER.glow = air6dResult.sync.lock * 0.02;
+  /* CONTROLS */
+  #controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 0;
+  }
+  button {
+    background: #111;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    transition: 0.2s;
+  }
+  button:hover { background: #1a1a2a; border-color: var(--fg); }
+  button:active { transform: scale(0.95); }
+  button.primary { border-color: var(--tri); color: var(--tri); }
+  button.primary:hover { background: var(--tri); color: #000; }
+  button.form-btn { border-color: var(--form); color: var(--form); }
+  button.form-btn:hover { background: var(--form); color: #000; }
+  button.quant-btn { border-color: var(--quant); color: var(--quant); }
+  button.quant-btn:hover { background: var(--quant); color: #000; }
+  button.syn-btn { border-color: var(--syn); color: var(--syn); }
+  button.syn-btn:hover { background: var(--syn); color: #000; }
+  button.danger { border-color: #f44; color: #f44; }
+  button.danger:hover { background: #f44; color: #000; }
+  select, input[type="range"] {
+    background: #111;
+    color: var(--fg);
+    border: 1px solid #333;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 9px;
+  }
+  input[type="range"] { width: 60px; }
 
-  // Pulse abhängig von AIR6D Vector
-  HYPEPER.pulse = air6dResult.vector.magnitude * 0.03;
+  /* DATA PANEL */
+  #data-panel {
+    background: #05050a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+  }
+  #data-panel .header h3 { color: var(--form); font-size: 12px; }
 
-  // Warp abhängig von RUN8 Stage1
-  HYPEPER.warp = run8Result.stage1.curve * 0.05;
+  #tabs {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  #tabs button {
+    background: transparent;
+    border: none;
+    color: #666;
+    padding: 2px 8px;
+    font-size: 9px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: 0.2s;
+  }
+  #tabs button:hover { background: #1a1a2a; }
+  #tabs button.active {
+    color: #fff;
+    background: #1a1a2a;
+    border-bottom: 2px solid var(--form);
+  }
 
-  // Drift abhängig von FORM
-  HYPEPER.drift = run8Result.stage2.drift * 0.04;
+  #data-content {
+    flex: 1;
+    overflow-y: auto;
+    font-size: 9px;
+    line-height: 1.4;
+    min-height: 150px;
+    max-height: 350px;
+    padding: 4px 0;
+  }
+  #data-content .entry {
+    padding: 1px 0;
+    border-bottom: 1px solid #0a0a12;
+  }
+  #data-content .entry .time { color: #444; }
+  #data-content .entry .msg { color: #8af; }
+  #data-content .entry .msg.ok { color: #4f4; }
+  #data-content .entry .msg.err { color: #f44; }
+  #data-content .entry .msg.warn { color: #ff4; }
+  #data-content .entry .msg.tri { color: var(--tri); }
+  #data-content .entry .msg.form { color: var(--form); }
+  #data-content .entry .msg.quant { color: var(--quant); }
+  #data-content .entry .msg.syn { color: var(--syn); }
+  #data-content pre {
+    background: #0a0a12;
+    padding: 4px;
+    border-radius: 3px;
+    font-size: 8px;
+    color: #8af;
+    margin: 2px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
 
-  // Angle beeinflusst Rotation
-  HYPEPER.angle = run8Result.stage2.angle * 0.01;
+  /* MODULE STATUS */
+  #module-status {
+    background: #05050a;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 9px;
+    color: #666;
+  }
+  #module-status .mod {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  #module-status .mod .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #333;
+  }
+  #module-status .mod .dot.loaded { background: #4f4; }
+  #module-status .mod .dot.error { background: #f44; }
+  #module-status .mod .dot.busy { background: #ff4; animation: blink 0.5s infinite; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <h1>⚡ FOGth · EVOlution · SUPER ENGINE</h1>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span id="status-led" class="off"></span>
+    <span id="clock" style="font-size:11px;color:#666;">⏱️ --:--:--</span>
+    <span id="cycle-count" style="font-size:10px;color:#444;">Zyklus 0</span>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+  <!-- CANVAS -->
+  <div id="canvas-panel">
+    <div class="header">
+      <h3>🌀 HY·PE·PER · 3×3 · FLUX · TORNADO</h3>
+      <span id="stats">P: 0 | S: 0 | E: 0</span>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="simCanvas"></canvas>
+    </div>
+    <div id="controls">
+      <button class="primary" id="btn-boot">▶ BOOT</button>
+      <button id="btn-triangle">🔺 TRI</button>
+      <button class="form-btn" id="btn-form">📐 FORM</button>
+      <button class="quant-btn" id="btn-quant">🌀 QUANT</button>
+      <button class="syn-btn" id="btn-syn">🔄 SYN</button>
+      <button id="btn-step">⏭ STEP</button>
+      <button class="danger" id="btn-reset">⟲ RESET</button>
+      <button id="btn-run8">⚡ RUN8</button>
+      <label style="font-size:9px;color:#666;">Speed:
+        <select id="speedSelect">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+        </select>
+      </label>
+      <label style="font-size:9px;color:#666;">Strength:
+        <input type="range" id="sinkStrength" min="10" max="400" value="150">
+      </label>
+    </div>
+  </div>
+
+  <!-- DATA -->
+  <div id="data-panel">
+    <div class="header"><h3>📊 DATA · Analysis</h3></div>
+    <div id="tabs">
+      <button class="active" data-tab="log">📋 Log</button>
+      <button data-tab="run8">⚡ RUN8</button>
+      <button data-tab="air6d">🌀 AIR6D</button>
+      <button data-tab="form">📐 FORM</button>
+      <button data-tab="quant">🌀 QUANT</button>
+      <button data-tab="syn">🔄 SYN</button>
+      <button data-tab="vector">📐 VECTOR</button>
+      <button data-tab="matrix">📊 MATRIX</button>
+    </div>
+    <div id="data-content">
+      <div class="entry"><span class="time">[INIT]</span> <span class="msg">⚡ FOGth · EVOlution · SUPER ENGINE</span></div>
+      <div class="entry"><span class="time">[INIT]</span> <span class="msg">📦 Module: HY·PE·PER · RUN8 · AIR6D · FORM · QUANT · SYN · VECTOR</span></div>
+      <div class="entry"><span class="time">[INIT]</span> <span class="msg">🌀 Warte auf BOOT...</span></div>
+    </div>
+  </div>
+</main>
+
+<!-- MODULE STATUS -->
+<div id="module-status">
+  <span class="mod"><span class="dot" id="mod-hypeper"></span> HY·PE·PER</span>
+  <span class="mod"><span class="dot" id="mod-run8"></span> RUN8</span>
+  <span class="mod"><span class="dot" id="mod-air6d"></span> AIR6D</span>
+  <span class="mod"><span class="dot" id="mod-form"></span> FORM</span>
+  <span class="mod"><span class="dot" id="mod-quant"></span> QUANT</span>
+  <span class="mod"><span class="dot" id="mod-syn"></span> SYN</span>
+  <span class="mod"><span class="dot" id="mod-vector"></span> VECTOR</span>
+  <span style="margin-left:auto;font-size:8px;color:#444;">v3.0 · 3-9-27-81</span>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "./FORM_CORE.js": "./FORM_CORE.js",
+    "./FORM_ENGINE.js": "./FORM_ENGINE.js",
+    "./FORM_MATRIX.js": "./FORM_MATRIX.js",
+    "./VEC_CORE.js": "./VEC_CORE.js",
+    "./FLX_CORE.js": "./FLX_CORE.js",
+    "./syn.js": "./syn.js",
+    "./PIPELINE_RUN8.js": "./PIPELINE_RUN8.js",
+    "./AIR6D_MOVE.js": "./AIR6D_MOVE.js"
+  }
 }
+</script>
+
+<script type="module">
+// ============================================================
+// 1. IMPORTS — ALLE MODULE
+// ============================================================
+import { FORM_CORE } from "./FORM_CORE.js";
+import { FORM_ENGINE } from "./FORM_ENGINE.js";
+import { FORM_MATRIX } from "./FORM_MATRIX.js";
+import { VEC_CORE } from "./VEC_CORE.js";
+import { FLX_CORE } from "./FLX_CORE.js";
+import { SYN_CORE } from "./syn.js";
+import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
+import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
+
+// ============================================================
+// 2. DOM-REFERENZEN
+// ============================================================
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const logDiv = document.getElementById('data-content');
+const statusLed = document.getElementById('status-led');
+const clockEl = document.getElementById('clock');
+const cycleCountEl = document.getElementById('cycle-count');
+const statsEl = document.getElementById('stats');
+
+const btnBoot = document.getElementById('btn-boot');
+const btnTriangle = document.getElementById('btn-triangle');
+const btnForm = document.getElementById('btn-form');
+const btnQuant = document.getElementById('btn-quant');
+const btnSyn = document.getElementById('btn-syn');
+const btnStep = document.getElementById('btn-step');
+const btnReset = document.getElementById('btn-reset');
+const btnRun8 = document.getElementById('btn-run8');
+const speedSelect = document.getElementById('speedSelect');
+const sinkStrengthInput = document.getElementById('sinkStrength');
+
+// ============================================================
+// 3. CANVAS SETUP
+// ============================================================
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth || 500;
+  canvas.height = wrap.clientHeight || 350;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ============================================================
+// 4. STATE
+// ============================================================
+const state = {
+  cycle: 0,
+  running: false,
+  simTime: 0,
+  particles: [],
+  sinks: [],
+  sources: [],
+  events: [],
+  stars: [],
+  triangle: null,
+  hypeper: {
+    matrix: [
+      [{ axis: 'A' }, { axis: 'B' }, { axis: 'C' }],
+      [{ axis: 'B' }, { axis: 'C' }, { axis: 'A' }],
+      [{ axis: 'C' }, { axis: 'A' }, { axis: 'B' }]
+    ],
+    glow: 0,
+    pulse: 0,
+    warp: 0,
+    drift: 0,
+    angle: 0
+  },
+  run8Data: null,
+  air6dData: null,
+  formData: null,
+  quantData: null,
+  synData: null,
+  vectorData: null,
+  lastTime: 0
+};
+
+// ============================================================
+// 5. LOG
+// ============================================================
+function log(msg, type = 'info') {
+  const entry = document.createElement('div');
+  entry.className = 'entry';
+  const time = new Date().toLocaleTimeString();
+  const cls = type === 'ok' ? 'ok' : type === 'err' ? 'err' : type === 'warn' ? 'warn' :
+              type === 'tri' ? 'tri' : type === 'form' ? 'form' : type === 'quant' ? 'quant' :
+              type === 'syn' ? 'syn' : '';
+  entry.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${cls}">${msg}</span>`;
+  logDiv.appendChild(entry);
+  logDiv.scrollTop = logDiv.scrollHeight;
+  while (logDiv.children.length > 200) logDiv.removeChild(logDiv.firstChild);
+}
+
+// ============================================================
+// 6. TRIANGLE + SINK/SOURCE
+// ============================================================
+function makeTriangle(p1, p2, p3) {
+  return {
+    p1, p2, p3,
+    sideA: { a: p1, b: p2 },
+    sideB: { a: p2, b: p3 },
+    center: { x: (p1.x + p2.x + p3.x) / 3, y: (p1.y + p2.y + p3.y) / 3 }
+  };
+}
+
+function makeSink(sideA, opts = { radius: 35, strength: 150 }) {
+  return {
+    id: 'A-' + Date.now(),
+    pos: { x: (sideA.a.x + sideA.b.x) / 2, y: (sideA.a.y + sideA.b.y) / 2 },
+    radius: opts.radius,
+    strength: opts.strength,
+    energy: 0
+  };
+}
+
+function makeSource(sideB, opts = { radius: 8, emissionRate: 1.0, energy: 80 }) {
+  return {
+    id: 'B-' + Date.now(),
+    pos: {
+      x: (sideB.a.x + sideB.b.x) / 2 + (Math.random() - 0.5) * 30,
+      y: (sideB.a.y + sideB.b.y) / 2 + (Math.random() - 0.5) * 30
+    },
+    radius: opts.radius,
+    emissionRate: opts.emissionRate,
+    energy: opts.energy
+  };
+}
+
+function spawnParticle(source) {
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 0.6 + Math.random() * 1.5;
+  return {
+    pos: { x: source.pos.x, y: source.pos.y },
+    vel: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+    mass: 1,
+    life: 12 + Math.random() * 25,
+    origin: source.id,
+    trail: []
+  };
+}
+
+// ============================================================
+// 7. HY·PE·PER RENDER
+// ============================================================
+function renderHypeper(time) {
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2;
+  const radius = 140 + Math.sin(time * 0.3) * 20 + state.hypeper.drift;
+
+  // ── Verbindungen ──
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      for (let k = 0; k < 3; k++) {
+        if (k === j) continue;
+        const x1 = cx + Math.cos(time + (i + j) + state.hypeper.angle) * radius * (i + 1);
+        const y1 = cy + Math.sin(time + (i + j) + state.hypeper.angle) * radius * (j + 1);
+        const x2 = cx + Math.cos(time + (i + k) + state.hypeper.angle) * radius * (i + 1);
+        const y2 = cy + Math.sin(time + (i + k) + state.hypeper.angle) * radius * (k + 1);
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = `rgba(0, 255, 0, ${0.04 + state.hypeper.glow})`;
+        ctx.lineWidth = 0.5 + state.hypeper.pulse;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // ── 9 Zellen ──
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      const cell = state.hypeper.matrix[i][j];
+      const flux = 0.5 + 0.5 * Math.sin(time * 0.5 + i * 1.3 + j * 0.7 + state.hypeper.warp);
+      const size = 18 + flux * 12 + state.hypeper.pulse * 5;
+      const x = cx + Math.cos(time + (i + j) + state.hypeper.angle) * radius * (i + 1);
+      const y = cy + Math.sin(time + (i + j) + state.hypeper.angle) * radius * (j + 1);
+
+      // Glow
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, size + 10);
+      grad.addColorStop(0, `rgba(0, 255, 0, ${0.1 + flux * 0.2 + state.hypeper.glow})`);
+      grad.addColorStop(1, 'rgba(0, 255, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, size + 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Kreis
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      const colors = ['#ffaa00', '#00ccff', '#ff00aa'];
+      ctx.strokeStyle = colors[(i + j) % 3];
+      ctx.lineWidth = 1.5 + flux * 1.5 + state.hypeper.pulse;
+      ctx.shadowColor = '#0f0';
+      ctx.shadowBlur = 10 + flux * 10 + state.hypeper.glow * 20;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.fillStyle = `rgb(200, 255, ${150 + flux * 100})`;
+      ctx.font = `${14 + flux * 6 + state.hypeper.pulse * 4}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cell.axis, x, y + 2);
+    }
+  }
+
+  // ── Tornado-Spirale ──
+  ctx.beginPath();
+  ctx.strokeStyle = `rgba(0, 255, 200, ${0.1 + state.hypeper.glow * 0.2})`;
+  ctx.lineWidth = 1 + state.hypeper.pulse;
+  for (let t = 0; t < 200; t++) {
+    const tx = cx + Math.cos(time + t * 0.08 + state.hypeper.angle) * (t * 1.2 + Math.sin(t * 0.05 + time * 2) * 30 + state.hypeper.drift * 20);
+    const ty = cy + Math.sin(time + t * 0.08 + state.hypeper.angle) * (t * 1.2 + Math.sin(t * 0.05 + time * 2) * 30 + state.hypeper.drift * 20);
+    ctx.lineTo(tx, ty);
+  }
+  ctx.stroke();
+
+  // ── Zeit-Pulse ──
+  for (let p = 0; p < 5; p++) {
+    const phase = (p / 5) * Math.PI * 2 + time * 0.5 + state.hypeper.angle;
+    const r = 50 + Math.sin(phase) * 30 + state.hypeper.pulse * 10;
+    const px = cx + Math.cos(phase) * r;
+    const py = cy + Math.sin(phase) * r;
+    ctx.beginPath();
+    ctx.arc(px, py, 3 + Math.sin(phase + time) * 2 + state.hypeper.pulse * 2, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 255, 200, ${0.3 + Math.sin(phase) * 0.2 + state.hypeper.glow * 0.3})`;
+    ctx.fill();
+  }
+}
+
+// ============================================================
+// 8. SIMULATION STEP
+// ============================================================
+function simStep(dt) {
+  const speed = parseFloat(speedSelect.value) || 1;
+  dt = dt * speed;
+
+  for (const src of state.sources) {
+    if (Math.random() < src.emissionRate * dt * 0.4) {
+      state.particles.push(spawnParticle(src));
+      src.energy -= 0.12;
+    }
+  }
+
+  const newParticles = [];
+  for (const p of state.particles) {
+    let fx = 0, fy = 0;
+    for (const s of state.sinks) {
+      const dx = s.pos.x - p.pos.x;
+      const dy = s.pos.y - p.pos.y;
+      const r2 = dx * dx + dy * dy + 0.01;
+      const r = Math.sqrt(r2);
+      const F = s.strength / r2;
+      fx += F * (dx / r);
+      fy += F * (dy / r);
+    }
+
+    const damping = 0.04;
+    p.vel.x += fx * dt * 2;
+    p.vel.y += fy * dt * 2;
+    p.vel.x *= (1 - damping);
+    p.vel.y *= (1 - damping);
+    p.pos.x += p.vel.x * dt * 80;
+    p.pos.y += p.vel.y * dt * 80;
+    p.life -= dt;
+
+    p.trail.push({ x: p.pos.x, y: p.pos.y });
+    if (p.trail.length > 10) p.trail.shift();
+
+    let absorbed = false;
+    for (const s of state.sinks) {
+      const dx = s.pos.x - p.pos.x;
+      const dy = s.pos.y - p.pos.y;
+      const r = Math.sqrt(dx * dx + dy * dy);
+      if (r < Math.max(5, s.radius * 0.12)) {
+        s.energy += p.mass;
+        state.events.push({ type: 'absorbed', sinkId: s.id, time: Date.now() });
+        absorbed = true;
+        break;
+      }
+    }
+
+    if (p.life > 0 && !absorbed) newParticles.push(p);
+  }
+  state.particles = newParticles;
+
+  for (const s of state.sinks) {
+    if (s.energy > 25) {
+      s.energy -= 25;
+      const star = {
+        id: 'star-' + Date.now(),
+        pos: { x: s.pos.x + (Math.random() - 0.5) * 100, y: s.pos.y + (Math.random() - 0.5) * 100 },
+        energy: 10,
+        life: 40
+      };
+      state.stars.push(star);
+      state.events.push({ type: 'spawnStar', starId: star.id, time: Date.now() });
+      log(`⭐ Star gespawnt bei (${star.pos.x.toFixed(0)}, ${star.pos.y.toFixed(0)})`, 'warn');
+    }
+  }
+
+  state.stars = state.stars.filter(s => {
+    s.life -= dt;
+    return s.life > 0;
+  });
+
+  state.simTime += dt;
+}
+
+// ============================================================
+// 9. RENDER
+// ============================================================
+function render(time) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/2);
+  grad.addColorStop(0, '#0a0a1a');
+  grad.addColorStop(1, '#000');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Grid
+  ctx.strokeStyle = '#0a0a1a';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  // Triangle
+  if (state.triangle) {
+    const t = state.triangle;
+    ctx.beginPath();
+    ctx.moveTo(t.p1.x, t.p1.y);
+    ctx.lineTo(t.p2.x, t.p2.y);
+    ctx.lineTo(t.p3.x, t.p3.y);
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Stars
+  for (const s of state.stars) {
+    const r = 3 + s.energy * 0.2;
+    const grad2 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r);
+    grad2.addColorStop(0, '#ff6');
+    grad2.addColorStop(1, 'rgba(255,255,0,0)');
+    ctx.fillStyle = grad2;
+    ctx.beginPath();
+    ctx.arc(s.pos.x, s.pos.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Particles
+  for (const p of state.particles) {
+    for (let i = 0; i < p.trail.length - 1; i++) {
+      const alpha = i / p.trail.length * 0.3;
+      ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(p.trail[i].x, p.trail[i].y);
+      ctx.lineTo(p.trail[i+1].x, p.trail[i+1].y);
+      ctx.stroke();
+    }
+
+    const size = 2 + p.life * 0.04;
+    const grad3 = ctx.createRadialGradient(p.pos.x, p.pos.y, 0, p.pos.x, p.pos.y, size);
+    grad3.addColorStop(0, '#4ff');
+    grad3.addColorStop(1, 'rgba(0, 255, 255, 0)');
+    ctx.fillStyle = grad3;
+    ctx.beginPath();
+    ctx.arc(p.pos.x, p.pos.y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Sinks (A)
+  for (const s of state.sinks) {
+    const r = s.radius * 0.2 + s.energy * 0.15;
+    const grad4 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r + 10);
+    grad4.addColorStop(0, '#f44');
+    grad4.addColorStop(0.3, '#a22');
+    grad4.addColorStop(1, 'rgba(255,0,0,0)');
+    ctx.fillStyle = grad4;
+    ctx.beginPath();
+    ctx.arc(s.pos.x, s.pos.y, r + 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#f44';
+    ctx.font = '9px Consolas';
+    ctx.textAlign = 'center';
+    ctx.fillText(`A ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
+  }
+
+  // Sources (B)
+  for (const s of state.sources) {
+    const grad5 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, 15);
+    grad5.addColorStop(0, '#4f4');
+    grad5.addColorStop(1, 'rgba(0,255,0,0)');
+    ctx.fillStyle = grad5;
+    ctx.beginPath();
+    ctx.arc(s.pos.x, s.pos.y, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#4f4';
+    ctx.font = '9px Consolas';
+    ctx.textAlign = 'center';
+    ctx.fillText(`B ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
+  }
+
+  // HY·PE·PER
+  renderHypeper(time);
+
+  // Stats
+  statsEl.textContent = `P: ${state.particles.length} | S: ${state.stars.length} | E: ${state.events.length}`;
+}
+
+// ============================================================
+// 10. RUN8 / AIR6D ANALYSE
+// ============================================================
+const ion = { pulse: 0.8, warp: 0.3, charge: 0.5 };
+const echo = { resonance: 0.7, state: "loud", warp: 0.2 };
+const mia = { fusion: 60, pulse: 0.6, charge: 0.4 };
+
+function runAnalysis() {
+  try {
+    const t = state.simTime || 0;
+    const input = { ion, echo, mia, formCore: FORM_CORE || [], t };
+
+    const run8 = PIPELINE_RUN8(input);
+    const air6d = AIR6D_MOVE(input);
+
+    state.run8Data = run8;
+    state.air6dData = air6d;
+
+    // HY·PE·PER beeinflussen
+    state.hypeper.glow = (air6d.sync?.lock || 0) * 0.02;
+    state.hypeper.pulse = (air6d.vector?.magnitude || 0) * 0.03;
+    state.hypeper.warp = (run8.stage1?.curve || 0) * 0.05;
+    state.hypeper.drift = (run8.stage2?.drift || 0) * 0.04;
+    state.hypeper.angle = (run8.stage2?.angle || 0) * 0.01;
+
+    // Tabs updaten
+    const tabCache = {};
+    tabCache['run8'] = JSON.stringify(run8, null, 2);
+    tabCache['air6d'] = JSON.stringify(air6d, null, 2);
+    tabCache['form'] = JSON.stringify(run8.stage2 || {}, null, 2);
+    tabCache['quant'] = JSON.stringify({ quant: 'pending' }, null, 2);
+    tabCache['syn'] = JSON.stringify(run8.stage8 || {}, null, 2);
+    tabCache['vector'] = JSON.stringify(air6d.vector || {}, null, 2);
+    tabCache['matrix'] = JSON.stringify(FORM_MATRIX(FORM_CORE || []), null, 2);
+
+    updateTabContent('run8', tabCache['run8']);
+    updateTabContent('air6d', tabCache['air6d']);
+    updateTabContent('form', tabCache['form']);
+    updateTabContent('quant', tabCache['quant']);
+    updateTabContent('syn', tabCache['syn']);
+    updateTabContent('vector', tabCache['vector']);
+    updateTabContent('matrix', tabCache['matrix']);
+
+    log('⚡ RUN8 + AIR6D ausgeführt', 'warn');
+
+  } catch (e) {
+    log(`❌ Analyse Fehler: ${e.message}`, 'err');
+    console.error(e);
+  }
+}
+
+// ============================================================
+// 11. TABS
+// ============================================================
+let currentTab = 'log';
+const tabCache = {};
+
+function updateTabContent(tab, content) {
+  tabCache[tab] = content;
+  if (tab === currentTab) {
+    const contentDiv = document.getElementById('data-content');
+    if (tab === 'log') return;
+    contentDiv.innerHTML = `<pre>${typeof content === 'string' ? content : JSON.stringify(content, null, 2)}</pre>`;
+  }
+}
+
+document.querySelectorAll('#tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    const contentDiv = document.getElementById('data-content');
+
+    if (currentTab === 'log') {
+      contentDiv.innerHTML = logDiv.innerHTML;
+      return;
+    }
+
+    if (tabCache[currentTab]) {
+      contentDiv.innerHTML = `<pre>${typeof tabCache[currentTab] === 'string' ? tabCache[currentTab] : JSON.stringify(tabCache[currentTab], null, 2)}</pre>`;
+    } else {
+      contentDiv.innerHTML = `<pre>⏳ Keine Daten — führe zuerst RUN8 aus</pre>`;
+    }
+  });
+});
+
+// ============================================================
+// 12. BOOT / STEP / RESET / INIT
+// ============================================================
+function initTriangle() {
+  const w = canvas.width, h = canvas.height;
+  const tri = makeTriangle(
+    { x: w * 0.15, y: h * 0.85 },
+    { x: w * 0.85, y: h * 0.85 },
+    { x: w * 0.5, y: h * 0.1 }
+  );
+  state.triangle = tri;
+
+  const strength = parseFloat(sinkStrengthInput.value) || 150;
+  state.sinks = [makeSink(tri.sideA, { strength })];
+  state.sources = [makeSource(tri.sideB)];
+  state.particles = [];
+  state.stars = [];
+  state.events = [];
+  state.simTime = 0;
+
+  log('🔺 Triangle initialisiert', 'tri');
+}
+
+function bootAll() {
+  log('🚀 BOOT ALL — Lade Module...', 'warn');
+  statusLed.className = 'busy';
+
+  initTriangle();
+  const modules = ['hypeper', 'run8', 'air6d', 'form', 'quant', 'syn', 'vector'];
+  modules.forEach((key, i) => {
+    setTimeout(() => {
+      const dot = document.getElementById(`mod-${key}`);
+      if (dot) dot.className = 'dot loaded';
+      log(`✅ ${key.toUpperCase()} geladen`, 'ok');
+    }, 150 + i * 120);
+  });
+
+  setTimeout(() => {
+    statusLed.className = 'on';
+    state.running = true;
+    state.lastTime = performance.now();
+    log('✅ SYSTEM BEREIT — Simulation läuft', 'ok');
+    runAnalysis();
+    loopFrame(performance.now());
+  }, 150 + modules.length * 120 + 400);
+}
+
+function stepSim() {
+  log('⏭ STEP — Nächster Schritt', 'warn');
+  simStep(0.5);
+  render(state.simTime);
+  runAnalysis();
+  state.cycle++;
+  cycleCountEl.textContent = `Zyklus ${state.cycle}`;
+}
+
+function run8() {
+  log('⚡ RUN8 ausgeführt', 'warn');
+  runAnalysis();
+  state.cycle++;
+  cycleCountEl.textContent = `Zyklus ${state.cycle}`;
+  updateTabContent('run8', tabCache['run8']);
+  updateTabContent('air6d', tabCache['air6d']);
+}
+
+function resetAll() {
+  state.running = false;
+  state.particles = [];
+  state.sinks = [];
+  state.sources = [];
+  state.stars = [];
+  state.events = [];
+  state.simTime = 0;
+  state.cycle = 0;
+  state.triangle = null;
+  state.run8Data = null;
+  state.air6dData = null;
+  state.formData = null;
+  state.quantData = null;
+  state.synData = null;
+  state.vectorData = null;
+  state.hypeper = {
+    matrix: [
+      [{ axis: 'A' }, { axis: 'B' }, { axis: 'C' }],
+      [{ axis: 'B' }, { axis: 'C' }, { axis: 'A' }],
+      [{ axis: 'C' }, { axis: 'A' }, { axis: 'B' }]
+    ],
+    glow: 0,
+    pulse: 0,
+    warp: 0,
+    drift: 0,
+    angle: 0
+  };
+  cycleCountEl.textContent = 'Zyklus 0';
+  statusLed.className = 'off';
+
+  document.querySelectorAll('.mod .dot').forEach(d => d.className = 'dot');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  log('⟲ RESET — Alles zurückgesetzt', 'err');
+}
+
+// ============================================================
+// 13. LOOP
+// ============================================================
+function loopFrame(timestamp) {
+  if (!state.running) return;
+
+  const dt = Math.min((timestamp - state.lastTime) / 1000, 0.05);
+  state.lastTime = timestamp;
+
+  simStep(dt);
+  render(state.simTime);
+  state.cycle++;
+  cycleCountEl.textContent = `Zyklus ${state.cycle}`;
+
+  requestAnimationFrame(loopFrame);
+}
+
+// ============================================================
+// 14. UHR
+// ============================================================
+function updateClock() {
+  clockEl.textContent = `⏱️ ${new Date().toLocaleTimeString()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// 15. EVENTS
+// ============================================================
+btnBoot.addEventListener('click', bootAll);
+btnTriangle.addEventListener('click', initTriangle);
+btnForm.addEventListener('click', () => { log('📐 FORM ausgeführt', 'form'); });
+btnQuant.addEventListener('click', () => { log('🌀 QUANT ausgeführt', 'quant'); });
+btnSyn.addEventListener('click', () => { log('🔄 SYN ausgeführt', 'syn'); });
+btnStep.addEventListener('click', stepSim);
+btnReset.addEventListener('click', resetAll);
+btnRun8.addEventListener('click', run8);
+
+// ============================================================
+// 16. INIT
+// ============================================================
+log('⚡ FOGth · EVOlution · SUPER ENGINE geladen', 'warn');
+log('📦 Alle Module bereit', 'ok');
+log('🌀 Klick auf BOOT zum Start', 'tri');
+</script>
+
+</body>
+</html>
