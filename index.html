@@ -1,21 +1,41 @@
-// RUN8 / AIR6D – optimiert
-
 function run8() {
+  const t = performance.now() / 1000;
+
   const input = {
     ion,
     echo,
     mia,
     formCore: FORM_CORE,
-    t: performance.now() / 1000
+    t
   };
 
+  // Berechnung
   const run8Result = PIPELINE_RUN8(input);
   const air6dResult = AIR6D_MOVE(input);
 
+  // Ausgabe
   output.textContent = JSON.stringify({
     RUN8: run8Result,
     AIR6D: air6dResult
   }, null, 2);
-
   output.classList.add("show");
+
+  // ─────────────────────────────────────────────
+  // VISUELLE EINBINDUNG IN HYPEPER
+  // ─────────────────────────────────────────────
+
+  // Glow abhängig von AIR6D Sync
+  HYPEPER.glow = air6dResult.sync.lock * 0.02;
+
+  // Pulse abhängig von AIR6D Vector
+  HYPEPER.pulse = air6dResult.vector.magnitude * 0.03;
+
+  // Warp abhängig von RUN8 Stage1
+  HYPEPER.warp = run8Result.stage1.curve * 0.05;
+
+  // Drift abhängig von FORM
+  HYPEPER.drift = run8Result.stage2.drift * 0.04;
+
+  // Angle beeinflusst Rotation
+  HYPEPER.angle = run8Result.stage2.angle * 0.01;
 }
