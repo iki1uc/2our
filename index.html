@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SYN — Triangle Visual (SYN Engine)</title>
+  <style>
+    body{margin:0;background:#000;color:#0f0;font-family:Consolas,monospace}
+    header{padding:14px;background:#071;border-bottom:1px solid #033}
+    header h1{margin:0;color:#6cf}
+    #ui{padding:12px}
+    .row{display:flex;gap:8px;align-items:center}
+    button{background:#6cf;color:#000;border:none;padding:8px;border-radius:6px;cursor:pointer}
+    canvas{display:block;width:100%;height:70vh;background:#001;border-top:1px solid #033}
+    #status{white-space:pre-wrap;background:#020;padding:8px;border-radius:6px;margin-top:8px;max-height:160px;overflow:auto}
+  </style>
+</head>
+<body>
+  <header><h1>SYN — Triangle Visual (SYN Engine)</h1></header>
+  <div id="ui">
+    <div class="row">
+      <button id="btnInit">Init Triangle</button>
+      <button id="btnStart">Start</button>
+      <button id="btnStop">Stop</button>
+      <button id="btnReset">Reset</button>
+    </div>
+    <div style="margin-top:8px">
+      <label>Sink Strength: <input id="sinkStrength" type="range" min="10" max="400" value="120"></label>
+      <label style="margin-left:12px">Source Energy: <input id="sourceEnergy" type="range" min="5" max="200" value="50"></label>
+    </div>
+    <div id="status">Status: idle</div>
+  </div>
+
+  <canvas id="syn-canvas"></canvas>
+
+<script type="module">
+const CANVAS = document.getElementById('syn-canvas');
+const ctx = CANVAS.getContext('2d');
+
+function resizeCanvas(){
+  const dpr = window.devicePixelRatio||1;
+  CANVAS.width = Math.floor(window.innerWidth * dpr);
+  CANVAS.height = Math.floor(window.innerHeight * 0.7 * dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let triangleModule = null;
+let simState = { sinks:[], sources:[], particles:[], events:[], onSpawn:null };
+let raf = null;
+let running = false;
+
+// safe import triangle.js
+async function loadTriangleModule(){
+  try{
+    triangleModule = await import('./triangle.js');
+    console.info('triangle.js loaded');
+  }catch(e){
+    console.warn('triangle.js not found or failed to load:', e);
+    triangleModule = null;
+  }
+  return triangleModule;
+}
+
+// initialize triangle and create sink/source based on a sample triangle (centered)
+function initTriangle(){
+  // define three points (screen coords)
+  const w = CANVAS.clientWidth, h = CANVAS.clientHeight;
+  const p1 = { x: w*0.3, y: h*0.35 };
+  const p2 = { x: w*0.7, y: h*0.4 };
+  const p3 = { x: w*0.5, y: h*0.75 };
+  // prefer module's makeTriangle if available
+  const tri = triangleModule && triangleModule.makeTriangle ? triangleModule.makeTriangle(p1,p2,p3) : { p1,p2,p3, sideA:{a:p1,b:p2}, sideB:{a:p2,b:p3}, center:{x:(p1.x+p2.x+p3.x)/3,y:(p1.y+p2.y+p3.y)/3} };
+  // create sink & source
+  const sinkStrength = Number(document.getElementById('sinkStrength').value);
+  const srcEnergy = Number(document.getElementById('sourceEnergy').value);
+  const sink = (triangleModule && triangleModule.makeSink) ? triangleModule.makeSink(tri.sideA,{strength:sinkStrength, radius:40}) : { id:'A', pos:{ x:(tri.sideA.a.x+tri.sideA.b.x)/2, y:(tri.sideA.a.y+tri.sideA.b.y)/2 }, radius:40, strength:sinkStrength, energy:0 };
+  const src = (triangleModule && triangleModule.makeSource) ? triangleModule.makeSource(tri.sideB,{emissionRate:0.7, energy:srcEnergy}) : { id:'B', pos:{ x:(tri.sideB.a.x+tri.sideB.b.x)/2, y:(tri.sideB.a.y+tri.sideB.b.y)/2 }, radius:8, emissionRate:0.7, energy:srcEnergy };
+  simState = { sinks:[sink], sources:[src], particles:[], events:[], onSpawn: (star)=>{ console.log('spawn', star); } };
+  document.getElementById('status').textContent = `Triangle initialized. Sink @ (${Math.round(sink.pos.x)},${Math.round(sink.pos.y)}) Source @ (${Math.round(src.pos.x)},${Math.round(src.pos.y)})`;
+}
+
+// simulation step: use triangle.js.simStep if available
+function step(dt){
+  if(triangleModule && triangleModule.simStep) {
+    triangleModule.simStep(simState, dt);
+  } else {
+    // fallback simple step (small version)
+    // spawn particles
+    simState.sources.forEach(src=> {
+      if(Math.random() < (src.emissionRate * dt)){
+        const p = (triangleModule && triangleModule.spawnParticle) ? triangleModule.spawnParticle(src) : {
+          pos:{x:src.pos.x,y:src.pos.y}, vel:{x:(Math.random()-0.5)*2,y:(Math.random()-0.5)*2}, mass:1, life:10, origin:src.id
+        };
+        simState.particles.push(p);
+        src.energy -= 0.05;
+      }
+    });
+    // simple sink attraction
+    simState.particles.forEach(p=>{
+      simState.sinks.forEach(s=>{
+        const dx = s.pos.x - p.pos.x, dy = s.pos.y - p.pos.y;
+        const r2 = dx*dx + dy*dy + 0.001;
+        const F = s.strength / r2;
+        const r = Math.sqrt(r2);
+        p.vel.x += (F * dx/r) * dt;
+        p.vel.y += (F * dy/r) * dt;
+        p.vel.x *= 0.995; p.vel.y *= 0.995;
+        p.pos.x += p.vel.x * dt * 60; p.pos.y += p.vel.y * dt * 60;
+        p.life -= dt;
+        if(r < Math.max(4, s.radius*0.1)){
+          s.energy = (s.energy || 0) + p.mass;
+          simState.events.push({type:'absorbed', sinkId:s.id, time:Date.now()});
+          p.life = -1;
+        }
+      });
+    });
+    simState.particles = simState.particles.filter(p=>p.life>0);
+    // sink spawn rule
+    simState.sinks.forEach(s=>{
+      if(s.energy > 20){
+        s.energy -= 20;
+        const star = { id:'star-'+Date.now(), pos:{ x:s.pos.x + (Math.random()-0.5)*80, y:s.pos.y + (Math.random()-0.5)*80 }, energy:10 };
+        simState.events.push({ type:'spawnStar', sinkId:s.id, star, time:Date.now() });
+        if(simState.onSpawn) simState.onSpawn(star);
+      }
+    });
+  }
+}
+
+function render(){
+  ctx.clearRect(0,0,CANVAS.clientWidth,CANVAS.clientHeight);
+  // background radial for center
+  ctx.save();
+  // draw sink halo & sink
+  simState.sinks.forEach(s=>{
+    ctx.beginPath();
+    const g = ctx.createRadialGradient(s.pos.x,s.pos.y,0,s.pos.x,s.pos.y,s.radius*2);
+    g.addColorStop(0,'rgba(0,0,0,0)');
+    g.addColorStop(0.6,'rgba(0,0,0,0.6)');
+    g.addColorStop(1,'rgba(0,0,0,1)');
+    ctx.fillStyle=g;
+    ctx.fillRect(s.pos.x - s.radius*2, s.pos.y - s.radius*2, s.radius*4, s.radius*4);
+    ctx.fillStyle='rgba(0,0,0,1)';
+    ctx.beginPath(); ctx.arc(s.pos.x,s.pos.y,s.radius,0,Math.PI*2); ctx.fill();
+    // energy bar
+    ctx.fillStyle='rgba(255,200,0,0.9)'; ctx.fillRect(s.pos.x-20, s.pos.y+s.radius+6, Math.min(40, s.energy), 4);
+  });
+  // source
+  simState.sources.forEach(src=>{
+    ctx.fillStyle='rgba(255,200,80,1)'; ctx.beginPath(); ctx.arc(src.pos.x, src.pos.y, src.radius,0,Math.PI*2); ctx.fill();
+  });
+  // particles
+  simState.particles.forEach(p=>{
+    ctx.fillStyle='rgba(150,220,255,0.95)'; ctx.beginPath(); ctx.arc(p.pos.x,p.pos.y,2,0,Math.PI*2); ctx.fill();
+  });
+  // recent events: spawnStar markers
+  simState.events.slice(-20).forEach(ev=>{
+    if(ev.type==='spawnStar'){
+      ctx.fillStyle='rgba(255,100,100,0.95)'; ctx.beginPath(); ctx.arc(ev.star.pos.x,ev.star.pos.y,6,0,Math.PI*2); ctx.fill();
+    }
+  });
+  ctx.restore();
+}
+
+let last = performance.now();
+function loopFrame(now){
+  if(!running) return;
+  const dt = Math.min(0.06, (now - last) / 1000);
+  last = now;
+  step(dt);
+  render();
+  document.getElementById('status').textContent = `Particles: ${simState.particles.length} | Events: ${simState.events.length} | SinkEnergy: ${Math.round(simState.sinks[0]?.energy||0)}`;
+  raf = requestAnimationFrame(loopFrame);
+}
+
+// controls
+document.getElementById('btnInit').addEventListener('click', async ()=>{
+  await loadTriangleModule();
+  initTriangle();
+});
+document.getElementById('btnStart').addEventListener('click', ()=>{ if(!simState.sinks.length) initTriangle(); running=true; last = performance.now(); raf = requestAnimationFrame(loopFrame); });
+document.getElementById('btnStop').addEventListener('click', ()=>{ running=false; if(raf) cancelAnimationFrame(raf); });
+document.getElementById('btnReset').addEventListener('click', ()=>{ running=false; if(raf) cancelAnimationFrame(raf); simState={sinks:[],sources:[],particles:[],events:[],onSpawn:null}; document.getElementById('status').textContent='Reset'; ctx.clearRect(0,0,CANVAS.clientWidth,CANVAS.clientHeight); });
+
+document.getElementById('sinkStrength').addEventListener('input', (e)=>{ if(simState.sinks[0]) simState.sinks[0].strength = Number(e.target.value); });
+document.getElementById('sourceEnergy').addEventListener('input', (e)=>{ if(simState.sources[0]) simState.sources[0].energy = Number(e.target.value); });
+
+// auto init for convenience
+loadTriangleModule().then(()=> initTriangle());
+</script>
+</body>
+</html>

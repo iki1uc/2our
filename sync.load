@@ -1,0 +1,11 @@
+export function SYN_Runtime(){
+    return {
+        QI: "neutral",
+        IQQ: "neutral",
+        INIT: "neutral",
+        TEAM: "neutral",
+        VECTOR: "neutral",
+        RESPO: "neutral",
+        SYNC: "neutral"
+    };
+}
