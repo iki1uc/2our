@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QUANT · SYN · FORM · VECTOR — Full Integration</title>
+    <style>
+        :root {
+            --bg: #0a0a12;
+            --fg: #0f0;
+            --tri: #f44;
+            --form: #4f4;
+            --quant: #f4f;
+            --syn: #4ff;
+            --vector: #ff4;
+            --border: #1a1a2a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--fg);
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 8px;
+        }
+
+        /* HEADER */
+        header {
+            border-bottom: 2px solid var(--tri);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        header h1 {
+            font-size: 18px;
+            background: linear-gradient(90deg, var(--tri), var(--form), var(--quant));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        #status-led {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+            transition: 0.3s;
+        }
+        #status-led.on { background: #0f0; box-shadow: 0 0 20px #0f0; }
+        #status-led.off { background: #f00; }
+        #status-led.busy { background: #ff0; animation: blink 0.5s infinite; }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+        /* MAIN LAYOUT */
+        main {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 8px;
+            min-height: 500px;
+        }
+
+        /* CANVAS PANEL */
+        #canvas-panel {
+            background: #05050a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+        #canvas-panel .header {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+        #canvas-panel .header h3 { color: var(--tri); font-size: 12px; }
+        #canvas-panel .header span { font-size: 10px; color: #666; }
+        #canvas-wrap {
+            flex: 1;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            min-height: 250px;
+            position: relative;
+        }
+        #canvas-wrap canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* CONTROLS */
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px 0;
+        }
+        button {
+            background: #111;
+            color: var(--fg);
+            border: 1px solid #333;
+            padding: 3px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+            transition: 0.2s;
+        }
+        button:hover { background: #1a1a2a; border-color: var(--fg); }
+        button:active { transform: scale(0.95); }
+        button.primary { border-color: var(--tri); color: var(--tri); }
+        button.primary:hover { background: var(--tri); color: #000; }
+        button.form-btn { border-color: var(--form); color: var(--form); }
+        button.form-btn:hover { background: var(--form); color: #000; }
+        button.quant-btn { border-color: var(--quant); color: var(--quant); }
+        button.quant-btn:hover { background: var(--quant); color: #000; }
+        button.syn-btn { border-color: var(--syn); color: var(--syn); }
+        button.syn-btn:hover { background: var(--syn); color: #000; }
+        button.danger { border-color: #f44; color: #f44; }
+        button.danger:hover { background: #f44; color: #000; }
+        select, input[type="range"] {
+            background: #111;
+            color: var(--fg);
+            border: 1px solid #333;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: inherit;
+            font-size: 9px;
+        }
+        input[type="range"] { width: 60px; }
+
+        /* DATA PANEL */
+        #data-panel {
+            background: #05050a;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+        }
+        #data-panel .header h3 { color: var(--form); font-size: 12px; }
+
+        #tabs {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            padding: 2px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        #tabs button {
+            background: transparent;
+            border: none;
+            color: #666;
+            padding: 2px 8px;
+            font-size: 9px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: 0.2s;
+        }
+        #tabs button:hover { background: #1a1a2a; }
+        #tabs button.active {
+            color: #fff;
+            background: #1a1a2a;
+            border-bottom: 2px solid var(--form);
+        }
+
+        #data-content {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 9px;
+            line-height: 1.4;
+            min-height: 150px;
+            max-height: 350px;
+            padding: 4px 0;
+        }
+        #data-content .entry {
+            padding: 1px 0;
+            border-bottom: 1px solid #0a0a12;
+        }
+        #data-content .entry .time { color: #444; }
+        #data-content .entry .msg { color: #8af; }
+        #data-content .entry .msg.ok { color: #4f4; }
+        #data-content .entry .msg.err { color: #f44; }
+        #data-content .entry .msg.warn { color: #ff4; }
+        #data-content .entry .msg.tri { color: var(--tri); }
+        #data-content .entry .msg.form { color: var(--form); }
+        #data-content .entry .msg.quant { color: var(--quant); }
+        #data-content .entry .msg.syn { color: var(--syn); }
+        #data-content pre {
+            background: #0a0a12;
+            padding: 4px;
+            border-radius: 3px;
+            font-size: 8px;
+            color: #8af;
+            margin: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* MODULE STATUS */
+        #module-status {
+            background: #05050a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            font-size: 9px;
+            color: #666;
+        }
+        #module-status .mod {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        #module-status .mod .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #333;
+        }
+        #module-status .mod .dot.loaded { background: #4f4; }
+        #module-status .mod .dot.error { background: #f44; }
+        #module-status .mod .dot.busy { background: #ff4; animation: blink 0.5s infinite; }
+
+        @media (max-width: 900px) {
+            main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+    <h1>🔺 QUANT · SYN · FORM · VECTOR — Full Integration</h1>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span id="status-led" class="off"></span>
+        <span id="clock" style="font-size:11px;color:#666;">⏱️ --:--:--</span>
+        <span id="cycle-count" style="font-size:10px;color:#444;">Zyklus 0</span>
+    </div>
+</header>
+
+<!-- MAIN -->
+<main>
+    <!-- CANVAS -->
+    <div id="canvas-panel">
+        <div class="header">
+            <h3>🔺 TRIANGLE · Sink (A) + Source (B)</h3>
+            <span id="stats">P: 0 | S: 0 | E: 0</span>
+        </div>
+        <div id="canvas-wrap">
+            <canvas id="simCanvas"></canvas>
+        </div>
+        <div id="controls">
+            <button class="primary" id="btn-boot">▶ BOOT</button>
+            <button id="btn-triangle">🔺 TRI</button>
+            <button class="form-btn" id="btn-form">📐 FORM</button>
+            <button class="quant-btn" id="btn-quant">🌀 QUANT</button>
+            <button class="syn-btn" id="btn-syn">🔄 SYN</button>
+            <button id="btn-step">⏭ STEP</button>
+            <button class="danger" id="btn-reset">⟲ RESET</button>
+            <label style="font-size:9px;color:#666;">Speed:
+                <select id="speedSelect">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1x</option>
+                    <option value="2">2x</option>
+                    <option value="4">4x</option>
+                </select>
+            </label>
+            <label style="font-size:9px;color:#666;">Strength:
+                <input type="range" id="sinkStrength" min="10" max="400" value="150">
+            </label>
+        </div>
+    </div>
+
+    <!-- DATA -->
+    <div id="data-panel">
+        <div class="header"><h3>📊 DATA · Analysis</h3></div>
+        <div id="tabs">
+            <button class="active" data-tab="log">📋 Log</button>
+            <button data-tab="form">📐 FORM</button>
+            <button data-tab="quant">🌀 QUANT</button>
+            <button data-tab="syn">🔄 SYN</button>
+            <button data-tab="vector">📐 VECTOR</button>
+            <button data-tab="matrix">📊 MATRIX</button>
+        </div>
+        <div id="data-content">
+            <div class="entry"><span class="time">[INIT]</span> <span class="msg">QUANT·SYN·FORM·VECTOR — Full Integration</span></div>
+            <div class="entry"><span class="time">[INIT]</span> <span class="msg">📦 Module: FORM_CORE, FORM_ENGINE, FORM_MATRIX, QUANT_CORE, opta, syn, vector</span></div>
+            <div class="entry"><span class="time">[INIT]</span> <span class="msg">🔺 Warte auf BOOT...</span></div>
+        </div>
+    </div>
+</main>
+
+<!-- MODULE STATUS -->
+<div id="module-status">
+    <span class="mod"><span class="dot" id="mod-form-core"></span> FORM_CORE</span>
+    <span class="mod"><span class="dot" id="mod-form-engine"></span> FORM_ENGINE</span>
+    <span class="mod"><span class="dot" id="mod-form-matrix"></span> FORM_MATRIX</span>
+    <span class="mod"><span class="dot" id="mod-quant-core"></span> QUANT_CORE</span>
+    <span class="mod"><span class="dot" id="mod-opta"></span> opta</span>
+    <span class="mod"><span class="dot" id="mod-syn"></span> syn</span>
+    <span class="mod"><span class="dot" id="mod-vector"></span> vector</span>
+    <span style="margin-left:auto;font-size:8px;color:#444;">v3.0 · 3-9-27-81</span>
+</div>
+
+<!-- ============================================================ -->
+<!-- SCRIPT — ALLE MODULE + SYN SIMULATION INTEGRIERT -->
+<!-- ============================================================ -->
+<script type="importmap">
+{
+    "imports": {
+        "./FORM_CORE.js": "./FORM_CORE.js",
+        "./FORM_ENGINE.js": "./FORM_ENGINE.js",
+        "./FORM_MATRIX.js": "./FORM_MATRIX.js",
+        "./QUANT_CORE.js": "./QUANT_CORE.js",
+        "./opta.js": "./opta.js",
+        "./syn.js": "./syn.js",
+        "./vector.js": "./vector.js"
+    }
+}
+</script>
+
+<script type="module">
+// ============================================================
+// 1. IMPORTS — ALLE MODULE
+// ============================================================
+import FORM_CORE from './FORM_CORE.js';
+import FORM_ENGINE from './FORM_ENGINE.js';
+import FORM_MATRIX from './FORM_MATRIX.js';
+import QUANT_CORE from './QUANT_CORE.js';
+import { Opta } from './opta.js';
+import { SYN_CORE } from './syn.js';
+import { Vector } from './vector.js';
+
+// ============================================================
+// 2. MODULE-REGISTRY
+// ============================================================
+const MODULES = {
+    formCore: { name: 'FORM_CORE', mod: FORM_CORE, loaded: false },
+    formEngine: { name: 'FORM_ENGINE', mod: FORM_ENGINE, loaded: false },
+    formMatrix: { name: 'FORM_MATRIX', mod: FORM_MATRIX, loaded: false },
+    quantCore: { name: 'QUANT_CORE', mod: QUANT_CORE, loaded: false },
+    opta: { name: 'opta', mod: Opta, loaded: false },
+    syn: { name: 'syn', mod: SYN_CORE, loaded: false },
+    vector: { name: 'vector', mod: Vector, loaded: false }
+};
+
+// ============================================================
+// 3. DOM-REFERENZEN
+// ============================================================
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+const logDiv = document.getElementById('data-content');
+const statusLed = document.getElementById('status-led');
+const clockEl = document.getElementById('clock');
+const cycleCountEl = document.getElementById('cycle-count');
+const statsEl = document.getElementById('stats');
+
+const btnBoot = document.getElementById('btn-boot');
+const btnTriangle = document.getElementById('btn-triangle');
+const btnForm = document.getElementById('btn-form');
+const btnQuant = document.getElementById('btn-quant');
+const btnSyn = document.getElementById('btn-syn');
+const btnStep = document.getElementById('btn-step');
+const btnReset = document.getElementById('btn-reset');
+const speedSelect = document.getElementById('speedSelect');
+const sinkStrengthInput = document.getElementById('sinkStrength');
+
+// ============================================================
+// 4. CANVAS SETUP
+// ============================================================
+function resizeCanvas() {
+    const wrap = canvas.parentElement;
+    canvas.width = wrap.clientWidth || 500;
+    canvas.height = wrap.clientHeight || 350;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ============================================================
+// 5. STATE
+// ============================================================
+const state = {
+    cycle: 0,
+    running: false,
+    simTime: 0,
+    particles: [],
+    sinks: [],
+    sources: [],
+    events: [],
+    stars: [],
+    triangle: null,
+    formData: null,
+    quantData: null,
+    synData: null,
+    vectorData: null,
+    lastTime: 0
+};
+
+// ============================================================
+// 6. LOG
+// ============================================================
+function log(msg, type = 'info') {
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    const time = new Date().toLocaleTimeString();
+    const cls = type === 'ok' ? 'ok' : type === 'err' ? 'err' : type === 'warn' ? 'warn' :
+                type === 'tri' ? 'tri' : type === 'form' ? 'form' : type === 'quant' ? 'quant' :
+                type === 'syn' ? 'syn' : '';
+    entry.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${cls}">${msg}</span>`;
+    logDiv.appendChild(entry);
+    logDiv.scrollTop = logDiv.scrollHeight;
+    while (logDiv.children.length > 200) logDiv.removeChild(logDiv.firstChild);
+}
+
+// ============================================================
+// 7. TRIANGLE + SINK/SOURCE (SYN ENGINE)
+// ============================================================
+function makeTriangle(p1, p2, p3) {
+    return {
+        p1, p2, p3,
+        sideA: { a: p1, b: p2 },
+        sideB: { a: p2, b: p3 },
+        center: {
+            x: (p1.x + p2.x + p3.x) / 3,
+            y: (p1.y + p2.y + p3.y) / 3
+        }
+    };
+}
+
+function makeSink(sideA, opts = { radius: 35, strength: 150 }) {
+    return {
+        id: 'A-' + Date.now(),
+        pos: { x: (sideA.a.x + sideA.b.x) / 2, y: (sideA.a.y + sideA.b.y) / 2 },
+        radius: opts.radius,
+        strength: opts.strength,
+        energy: 0
+    };
+}
+
+function makeSource(sideB, opts = { radius: 8, emissionRate: 1.0, energy: 80 }) {
+    return {
+        id: 'B-' + Date.now(),
+        pos: {
+            x: (sideB.a.x + sideB.b.x) / 2 + (Math.random() - 0.5) * 30,
+            y: (sideB.a.y + sideB.b.y) / 2 + (Math.random() - 0.5) * 30
+        },
+        radius: opts.radius,
+        emissionRate: opts.emissionRate,
+        energy: opts.energy
+    };
+}
+
+function spawnParticle(source) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.6 + Math.random() * 1.5;
+    return {
+        pos: { x: source.pos.x, y: source.pos.y },
+        vel: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+        mass: 1,
+        life: 12 + Math.random() * 25,
+        origin: source.id,
+        trail: []
+    };
+}
+
+// ============================================================
+// 8. SIMULATION STEP
+// ============================================================
+function simStep(dt) {
+    const speed = parseFloat(speedSelect.value) || 1;
+    dt = dt * speed;
+
+    // Emission
+    for (const src of state.sources) {
+        if (Math.random() < src.emissionRate * dt * 0.4) {
+            state.particles.push(spawnParticle(src));
+            src.energy -= 0.12;
+        }
+    }
+
+    // Update particles
+    const newParticles = [];
+    for (const p of state.particles) {
+        let fx = 0, fy = 0;
+        for (const s of state.sinks) {
+            const dx = s.pos.x - p.pos.x;
+            const dy = s.pos.y - p.pos.y;
+            const r2 = dx * dx + dy * dy + 0.01;
+            const r = Math.sqrt(r2);
+            const F = s.strength / r2;
+            fx += F * (dx / r);
+            fy += F * (dy / r);
+        }
+
+        const damping = 0.04;
+        p.vel.x += fx * dt * 2;
+        p.vel.y += fy * dt * 2;
+        p.vel.x *= (1 - damping);
+        p.vel.y *= (1 - damping);
+        p.pos.x += p.vel.x * dt * 80;
+        p.pos.y += p.vel.y * dt * 80;
+        p.life -= dt;
+
+        // Trail
+        p.trail.push({ x: p.pos.x, y: p.pos.y });
+        if (p.trail.length > 10) p.trail.shift();
+
+        // Absorption
+        let absorbed = false;
+        for (const s of state.sinks) {
+            const dx = s.pos.x - p.pos.x;
+            const dy = s.pos.y - p.pos.y;
+            const r = Math.sqrt(dx * dx + dy * dy);
+            if (r < Math.max(5, s.radius * 0.12)) {
+                s.energy += p.mass;
+                state.events.push({ type: 'absorbed', sinkId: s.id, time: Date.now() });
+                absorbed = true;
+                break;
+            }
+        }
+
+        if (p.life > 0 && !absorbed) newParticles.push(p);
+    }
+    state.particles = newParticles;
+
+    // Sink spawn stars
+    for (const s of state.sinks) {
+        if (s.energy > 25) {
+            s.energy -= 25;
+            const star = {
+                id: 'star-' + Date.now(),
+                pos: {
+                    x: s.pos.x + (Math.random() - 0.5) * 100,
+                    y: s.pos.y + (Math.random() - 0.5) * 100
+                },
+                energy: 10,
+                life: 40
+            };
+            state.stars.push(star);
+            state.events.push({ type: 'spawnStar', starId: star.id, time: Date.now() });
+            log(`⭐ Star gespawnt bei (${star.pos.x.toFixed(0)}, ${star.pos.y.toFixed(0)})`, 'warn');
+        }
+    }
+
+    // Update stars
+    state.stars = state.stars.filter(s => {
+        s.life -= dt;
+        return s.life > 0;
+    });
+
+    state.simTime += dt;
+}
+
+// ============================================================
+// 9. RENDER
+// ============================================================
+function render() {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // Hintergrund
+    const grad = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w/2);
+    grad.addColorStop(0, '#0a0a1a');
+    grad.addColorStop(1, '#000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid
+    ctx.strokeStyle = '#0a0a1a';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+    }
+    for (let y = 0; y < h; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+    }
+
+    // Triangle
+    if (state.triangle) {
+        const t = state.triangle;
+        ctx.beginPath();
+        ctx.moveTo(t.p1.x, t.p1.y);
+        ctx.lineTo(t.p2.x, t.p2.y);
+        ctx.lineTo(t.p3.x, t.p3.y);
+        ctx.closePath();
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // Stars
+    for (const s of state.stars) {
+        const r = 3 + s.energy * 0.2;
+        const grad2 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r);
+        grad2.addColorStop(0, '#ff6');
+        grad2.addColorStop(1, 'rgba(255,255,0,0)');
+        ctx.fillStyle = grad2;
+        ctx.beginPath();
+        ctx.arc(s.pos.x, s.pos.y, r, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Particles
+    for (const p of state.particles) {
+        // Trail
+        for (let i = 0; i < p.trail.length - 1; i++) {
+            const alpha = i / p.trail.length * 0.3;
+            ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(p.trail[i].x, p.trail[i].y);
+            ctx.lineTo(p.trail[i+1].x, p.trail[i+1].y);
+            ctx.stroke();
+        }
+
+        // Partikel
+        const size = 2 + p.life * 0.04;
+        const grad3 = ctx.createRadialGradient(p.pos.x, p.pos.y, 0, p.pos.x, p.pos.y, size);
+        grad3.addColorStop(0, '#4ff');
+        grad3.addColorStop(1, 'rgba(0, 255, 255, 0)');
+        ctx.fillStyle = grad3;
+        ctx.beginPath();
+        ctx.arc(p.pos.x, p.pos.y, size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Sinks (A)
+    for (const s of state.sinks) {
+        const r = s.radius * 0.2 + s.energy * 0.15;
+        const grad4 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r + 10);
+        grad4.addColorStop(0, '#f44');
+        grad4.addColorStop(0.3, '#a22');
+        grad4.addColorStop(1, 'rgba(255,0,0,0)');
+        ctx.fillStyle = grad4;
+        ctx.beginPath();
+        ctx.arc(s.pos.x, s.pos.y, r + 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f44';
+        ctx.font = '9px Consolas';
+        ctx.textAlign = 'center';
+        ctx.fillText(`A ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
+    }
+
+    // Sources (B)
+    for (const s of state.sources) {
+        const grad5 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, 15);
+        grad5.addColorStop(0, '#4f4');
+        grad5.addColorStop(1, 'rgba(0,255,0,0)');
+        ctx.fillStyle = grad5;
+        ctx.beginPath();
+        ctx.arc(s.pos.x, s.pos.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#4f4';
+        ctx.font = '9px Consolas';
+        ctx.textAlign = 'center';
+        ctx.fillText(`B ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
+    }
+
+    // Stats
+    statsEl.textContent = `P: ${state.particles.length} | S: ${state.stars.length} | E: ${state.events.length}`;
+}
+
+// ============================================================
+// 10. FORM/QUANT/SYN/VECTOR ANALYSE
+// ============================================================
+function runAnalysis() {
+    try {
+        // FORM_CORE
+        const core = FORM_CORE || [];
+        const matrix = FORM_MATRIX ? FORM_MATRIX(core) : [];
+        const t = state.simTime || 0;
+        const engine = FORM_ENGINE ? FORM_ENGINE(matrix, t) : null;
+
+        state.formData = { core, matrix, engine };
+        log('📐 FORM_ENGINE ausgeführt', 'form');
+
+        // QUANT_CORE
+        if (engine && QUANT_CORE) {
+            const quant = QUANT_CORE(engine);
+            state.quantData = quant;
+            log(`🌀 QUANT_CORE: Energie=${quant.energy.toFixed(2)}, Stabilität=${quant.stability}`, 'quant');
+        }
+
+        // SYN_CORE (mit SYN-Engine-Daten)
+        if (SYN_CORE && engine) {
+            const mia = { fusion: 60 + Math.sin(t) * 20 };
+            const echo = { state: 'loud', resonance: 30 + Math.cos(t * 0.5) * 15 };
+            const syn = SYN_CORE(mia, echo, engine);
+            state.synData = syn;
+            log(`🔄 SYN_CORE: Lock=${syn.lock.toFixed(0)}, Stable=${syn.stable}`, 'syn');
+        }
+
+        // Vector
+        if (Vector) {
+            const v = new Vector(
+                Math.sin(t * 0.5) * 100,
+                Math.cos(t * 0.3) * 100,
+                Math.sin(t * 0.7) * 50
+            );
+            state.vectorData = {
+                x: v.x.toFixed(2),
+                y: v.y.toFixed(2),
+                z: v.z.toFixed(2),
+                magnitude: v.magnitude().toFixed(2)
+            };
+            log(`📐 VECTOR: magnitude=${state.vectorData.magnitude}`, 'form');
+        }
+
+        // Tabs updaten
+        updateTabContent('form', JSON.stringify({ matrix, engine }, null, 2));
+        updateTabContent('quant', JSON.stringify(state.quantData, null, 2));
+        updateTabContent('syn', JSON.stringify(state.synData, null, 2));
+        updateTabContent('vector', JSON.stringify(state.vectorData, null, 2));
+        updateTabContent('matrix', JSON.stringify(matrix, null, 2));
+
+    } catch (e) {
+        log(`❌ Analyse Fehler: ${e.message}`, 'err');
+    }
+}
+
+// ============================================================
+// 11. TABS
+// ============================================================
+let currentTab = 'log';
+const tabCache = {};
+
+function updateTabContent(tab, content) {
+    tabCache[tab] = content;
+    if (tab === currentTab) {
+        const contentDiv = document.getElementById('data-content');
+        if (tab === 'log') return;
+        contentDiv.innerHTML = `<pre>${typeof content === 'string' ? content : JSON.stringify(content, null, 2)}</pre>`;
+    }
+}
+
+document.querySelectorAll('#tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTab = btn.dataset.tab;
+        const contentDiv = document.getElementById('data-content');
+
+        if (currentTab === 'log') return;
+
+        if (tabCache[currentTab]) {
+            contentDiv.innerHTML = `<pre>${typeof tabCache[currentTab] === 'string' ? tabCache[currentTab] : JSON.stringify(tabCache[currentTab], null, 2)}</pre>`;
+        } else {
+            contentDiv.innerHTML = `<pre>⏳ Keine Daten — führe zuerst Analyse aus</pre>`;
+        }
+    });
+});
+
+// ============================================================
+// 12. BOOT / STEP / RESET / INIT
+// ============================================================
+function initTriangle() {
+    const w = canvas.width, h = canvas.height;
+    const tri = makeTriangle(
+        { x: w * 0.15, y: h * 0.85 },
+        { x: w * 0.85, y: h * 0.85 },
+        { x: w * 0.5, y: h * 0.1 }
+    );
+    state.triangle = tri;
+
+    const strength = parseFloat(sinkStrengthInput.value) || 150;
+    state.sinks = [makeSink(tri.sideA, { strength })];
+    state.sources = [makeSource(tri.sideB)];
+    state.particles = [];
+    state.stars = [];
+    state.events = [];
+    state.simTime = 0;
+
+    log('🔺 Triangle initialisiert', 'tri');
+}
+
+function bootAll() {
+    log('🚀 BOOT ALL — Lade Module...', 'warn');
+    statusLed.className = 'busy';
+
+    initTriangle();
+
+    // Module laden
+    Object.keys(MODULES).forEach((key, i) => {
+        setTimeout(() => {
+            MODULES[key].loaded = true;
+            const dot = document.getElementById(`mod-${key}`);
+            if (dot) dot.className = 'dot loaded';
+            log(`✅ ${MODULES[key].name} geladen`, 'ok');
+        }, 150 + i * 120);
+    });
+
+    setTimeout(() => {
+        statusLed.className = 'on';
+        state.running = true;
+        state.lastTime = performance.now();
+        log('✅ SYSTEM BEREIT — Simulation läuft', 'ok');
+        runAnalysis();
+        loopFrame(performance.now());
+    }, 150 + Object.keys(MODULES).length * 120 + 400);
+}
+
+function stepSim() {
+    log('⏭ STEP — Nächster Schritt', 'warn');
+    simStep(0.5);
+    render();
+    runAnalysis();
+    state.cycle++;
+    cycleCountEl.textContent = `Zyklus ${state.cycle}`;
+}
+
+function resetAll() {
+    state.running = false;
+    state.particles = [];
+    state.sinks = [];
+    state.sources = [];
+    state.stars = [];
+    state.events = [];
+    state.simTime = 0;
+    state.cycle = 0;
+    state.triangle = null;
+    state.formData = null;
+    state.quantData = null;
+    state.synData = null;
+    state.vectorData = null;
+    cycleCountEl.textContent = 'Zyklus 0';
+    statusLed.className = 'off';
+
+    Object.keys(MODULES).forEach(key => {
+        MODULES[key].loaded = false;
+        const dot = document.getElementById(`mod-${key}`);
+        if (dot) dot.className = 'dot';
+    });
+
+    ctx.clearRect(
