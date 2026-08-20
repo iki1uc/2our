@@ -1,3 +1,75 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HY·PE·PER · FOGth · 3×3 · Time Engine</title>
+
+<style>
+  body {
+    background: #000;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+  }
+  #fogth {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+  }
+  #info {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #0f0;
+    font-size: 14px;
+    background: rgba(0,0,0,0.6);
+    padding: 8px 20px;
+    border-radius: 30px;
+    border: 1px solid #0f0;
+    text-align: center;
+    white-space: nowrap;
+    letter-spacing: 2px;
+    box-shadow: 0 0 20px rgba(0,255,0,0.1);
+  }
+  #info .mc { color: #ffaa00; font-weight: bold; }
+  #info .fly { color: #00ccff; font-weight: bold; }
+</style>
+</head>
+
+<body>
+
+<canvas id="fogth"></canvas>
+
+<div id="info">
+  <span class="mc">⚡ HY·PE·PER</span> ·
+  <span class="fly">FOGth</span> ·
+  3×3 · G.root · ID = W · <span style="color:#0f0;">✦ TIME ENGINE</span>
+</div>
+
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // HY·PE·PER Engine rendern
+  HYPEPER.render(ctx, canvas, time);
+
+  time += speed;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
+99999999999999999999
 <script type="module">
 
 // ─── 1) MODULE IMPORTIEREN ─────────────────────────────
@@ -34,5 +106,20 @@ function RUN8() {
 // ─── 4) BUTTON BINDING ──────────────────────────────────
 
 document.querySelector("#run8").addEventListener("click", RUN8);
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // HY·PE·PER Engine rendern
+  HYPEPER.render(ctx, canvas, time);
+
+  time += speed;
+  requestAnimationFrame(draw);
+}
+
+draw();
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
 </script>
