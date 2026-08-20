@@ -1,5 +1,4 @@
-// PIPELINE_RUN8.js – 4‑Stufen‑Pipeline für RUN 8
-// Einheitliche Struktur – kompatibel mit AIR6D_MOVE
+// PIPELINE_RUN8.js – 4‑Stufen‑Pipeline
 
 import { VEC_CORE } from "./VEC_CORE.js";
 import { FLX_CORE } from "./FLX_CORE.js";
@@ -8,8 +7,7 @@ import { FORM_MATRIX } from "./FORM_MATRIX.js";
 import { SYN_CORE } from "./syn.js";
 
 export function PIPELINE_RUN8(input) {
-    // ─── Einheitliche Struktur ──────────────────────────
-    const { ion, echo, mia, formCore, t = 0 } = input;
+    const { ion, echo, mia, formCore, t = 0 } = input || {};
 
     // Stage 0 – VEC
     const vec = VEC_CORE({
