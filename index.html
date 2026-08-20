@@ -1,476 +1,62 @@
-<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>9hoch9 · ULTRA · Respo Engine — ATOM</title>
-<meta name="description" content="9×9 Respo Engine — QI/IQQ, φ‑Multiskala, Axis Discovery, TF‑IDF/KMeans fallback, meKI‑friendly metadata" />
-<!-- Machine‑readable metadata for meKI / automated agents -->
-<script type="application/ld+json">
-{
-  "@context": "http://schema.org",
-  "@type": "SoftwareSourceCode",
-  "name": "9hoch9 Respo Engine",
-  "description": "Interactive 9×9 Respo evaluation & discovery engine using QI/IQQ, phi weights, axis discovery and multiscale aggregation. Exposes machine JSON for meKI.",
-  "programmingLanguage": "JavaScript",
-  "codeRepository": "https://github.com/iki1uc/ATOM",
-  "keywords": ["respo","eval","QI","IQQ","phi","multiscale","axis","discovery","meKI"]
-}
-</script>
-
-<style>
-  :root{--bg:#000;--fg:#7ff;--accent:#6cf}
-  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Consolas,monospace}
-  header{display:flex;align-items:center;gap:12px;padding:12px}
-  .card{background:#041;padding:12px;border-radius:8px;border:1px solid #063}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  select,input,button,textarea{background:#001;color:var(--fg);border:1px solid #034;padding:6px;border-radius:6px}
-  #grid{display:grid;gap:4px;align-self:flex-start;margin-top:12px}
-  .cell{width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;user-select:none;background:#071;border:1px solid #033}
-  .cell.empty{background:#011;border:1px dashed #022;color:#446}
-  #detail{min-width:340px;max-width:420px;margin-left:12px}
-  .muted{color:#5a7;font-size:13px}
-  footer{padding:12px;color:#6f6;font-size:13px}
-  .row{display:flex;gap:8px;align-items:center}
-  .small{font-size:12px;color:#9fb}
-  #plot{background:#000;border:1px solid #033;border-radius:8px}
-  pre{background:#001;padding:8px;border-radius:6px;overflow:auto;max-height:240px}
-  .book{margin-top:12px;padding:8px;border-radius:6px;background:#021;border:1px solid #024}
-  .btn-primary{background:var(--accent);color:#000;border:none;padding:8px 10px;border-radius:6px;cursor:pointer}
-</style>
-</head>
-<body>
-
-<header>
-  <div>
-    <h1 style="margin:0">9hoch9 · ULTRA · Respo Engine</h1>
-    <div class="muted">Kompatibel mit 3×3 → 9×9 → 27×27 / φ‑Multiskala / meKI‑ready</div>
-  </div>
-  <div style="margin-left:auto" class="small">Version: interactive · Local only · Read‑only by default</div>
-</header>
-
-<section class="card">
-  <div class="controls">
-    <label>Level:
-      <select id="levelSelect">
-        <option value="1">3×3 (9)</option>
-        <option value="2" selected>9×9 (81)</option>
-        <option value="3">27×27 (729)</option>
-      </select>
-    </label>
-
-    <label>QI <input id="qi" type="range" min="0" max="1" step="0.01" value="0.65" /></label>
-    <label>IQQ <input id="iqq" type="range" min="0" max="1" step="0.01" value="0.35" /></label>
-
-    <label>Batch size:
-      <input id="batchSize" type="number" min="1" max="128" step="1" value="9" style="width:64px" />
-    </label>
-
-    <button id="genGrid" class="btn-primary">Erzeuge Grid</button>
-    <button id="autoFill" class="btn-primary">Auto‑Fill Respos</button>
-    <button id="discoverAxes">Discover Axes</button>
-    <button id="scoreAll">Score All</button>
-    <button id="exportJSON">Export JSON</button>
-
-    <label style="margin-left:auto"><input id="useMeKI" type="checkbox" /> meKI integration (wenn verfügbar)</label>
-  </div>
-
-  <div style="display:flex;gap:12px;margin-top:12px;align-items:flex-start">
-    <div id="grid" aria-label="Grid"></div>
-
-    <div id="detail" class="card">
-      <div><strong>Detail / Aktionen</strong></div>
-      <div id="cellInfo" style="margin-top:8px">Klicke eine Zelle für Edit / Score.</div>
-
-      <div style="margin-top:8px">
-        <div class="small">Top Candidates</div>
-        <div id="topList" style="max-height:220px;overflow:auto;margin-top:6px"></div>
-      </div>
-
-      <div style="margin-top:8px">
-        <div class="small">Multiskala (φ‑Gewichte)</div>
-        <div id="multiInfo" class="small">—</div>
-      </div>
-
-      <svg id="plot" width="300" height="300" viewBox="-150 -150 300 300" style="margin-top:8px">
-        <circle r="120" fill="none" stroke="#033"></circle>
-      </svg>
-    </div>
-  </div>
-
-  <div class="book">
-    <h3>Buchbar & KI‑freundlich</h3>
-    <p class="small">
-      Dieses UI exportiert standardisiertes JSON für jede Respo (id, text, confs, eval, axis_presence, axis_score, final_score).
-      Die <code>application/ld+json</code> oben hilft meKI‑Agenten, das Modul zu entdecken. Wenn ein meKI Modul (meKI.js) vorliegt, wird es zur dynamischen QI/IQQ‑/axisWeight‑Schätzung verwendet.
-    </p>
-    <details>
-      <summary class="small">Pipeline (klick für Details)</summary>
-      <ol class="small">
-        <li>Discovery → Textsammlung aus Zellen</li>
-        <li>Normalisierung → default confs (0.5) falls leer</li>
-        <li>Eval → arg / xarg / arg3te (deine Formel)</li>
-        <li>Axis mapping → known keyword match + discovered clusters (TF‑IDF + KMeans)</li>
-        <li>Multiskala → φ‑Gewichte über Levels</li>
-        <li>Final → final_score = 0.6·arg3te + 0.4·axis_score (configurable)</li>
-      </ol>
-    </details>
-  </div>
-</section>
-
-<footer>
-  © 2026 iki1uc wieimmer — Export/Import JSON available — No external network calls by default.
-</footer>
-
 <script type="module">
-/* 9hoch9 index — integrates with schnitt.js if present, else uses internal implementations.
-   Produces machine JSON suitable for meKI ingestion (if useMeKI checked).
-*/
 
-/* Config */
-const PHI = 1.61803398875;
-const DEFAULT_QI = 0.65, DEFAULT_IQQ = 0.35;
-const AXES_KNOWN = [
-  { name:'conceptual', keywords:['axiom','theory','concept','idea'] },
-  { name:'technical', keywords:['code','implementation','api','function','module'] },
-  { name:'repro', keywords:['example','reproduce','dataset','script','seed','steps'] },
-  { name:'usability', keywords:['guide','readme','usage','install','ui'] },
-  { name:'privacy', keywords:['email','pii','personal','secret','key','password'] },
-  { name:'performance', keywords:['perf','speed','optimi','latency','scale'] },
-  { name:'tests', keywords:['test','unit','assert','verify','expected'] },
-  { name:'ethics', keywords:['ethic','bias','impact','safety'] },
-  { name:'integration', keywords:['integrate','plugin','adapter','interop'] }
-];
+// ─────────────────────────────────────────────
+// 1) MODULE IMPORTIEREN
+// ─────────────────────────────────────────────
 
-/* Utilities */
-const $ = id => document.getElementById(id);
-function clamp(v,a=0,b=1){ return Math.max(a, Math.min(b, v)); }
-function mean(arr){ return arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : 0; }
-function phiWeights(nMax){ const ws = Array.from({length:nMax+1},(_,n)=>Math.pow(1/PHI,n)); const s = ws.reduce((a,b)=>a+b,0); return ws.map(w=>w/s); }
+import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
+import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
+import { FORM_CORE } from "./FORM_CORE.js";
 
-/* Try to find external schnitt / helper module provided by you */
-let external = {};
-try { external.schnitt = await import('./schnitt.js'); } catch(e){ external.schnitt = null; }
+// ─────────────────────────────────────────────
+// 2) GLOBALE ENGINE-EINGABEN
+// ─────────────────────────────────────────────
 
-/* Fallback implementations if not provided */
-function evalRespo(confs, QI, IQQ){
-  const base = mean(confs);
-  const maxc = Math.max(...confs), minc = Math.min(...confs);
-  const variance = maxc - minc;
-  const combined = clamp(QI*base + (1 - IQQ)*maxc);
-  const arg = combined;
-  const xarg = variance;
-  const arg3te = Number((combined * (1 - xarg)).toFixed(6));
-  return { base, maxc, minc, variance, arg, xarg, arg3te };
-}
-
-/* Simple TF‑IDF builder (lightweight) */
-function buildTfidf(corpus){
-  const docs = corpus.map(t => t.toLowerCase().replace(/[^\p{Letter}\p{Number}\s]/gu,' ').split(/\s+/).filter(Boolean));
-  const vocabMap = new Map();
-  docs.forEach(d=> d.forEach(w=> vocabMap.set(w, (vocabMap.get(w)||0)+1)));
-  const terms = Array.from(vocabMap.keys());
-  const docCount = docs.length;
-  const idf = terms.map(t => Math.log(docCount / (1 + docs.filter(d=>d.includes(t)).length)));
-  const vectors = docs.map(d=>{
-    const tf = terms.map(t => d.filter(x=>x===t).length / (d.length||1));
-    return tf.map((tfi,i)=>tfi * idf[i]);
-  });
-  return { terms, vectors };
-}
-function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
-function norm(a){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*a[i]; return Math.sqrt(s)+1e-12; }
-function cosine(a,b){ return dot(a,b)/(norm(a)*norm(b)); }
-
-/* Simple kmeans (small K, naive) */
-function kmeans(vectors, K=6, maxIter=40){
-  const n = vectors.length;
-  const dim = vectors[0]?.length || 0;
-  if(n===0) return { labels: [], centroids: [] };
-  let centroids = [];
-  const picks = new Set();
-  while(centroids.length < Math.min(K,n)){
-    const r = Math.floor(Math.random()*n);
-    if(!picks.has(r)){ picks.add(r); centroids.push(vectors[r].slice()); }
-  }
-  let labels = new Array(n).fill(0);
-  for(let it=0; it<maxIter; it++){
-    for(let i=0;i<n;i++){
-      let best=0, bestSim=-Infinity;
-      for(let c=0;c<centroids.length;c++){
-        const sim = cosine(vectors[i], centroids[c]);
-        if(sim>bestSim){ bestSim = sim; best = c; }
-      }
-      labels[i]=best;
-    }
-    const sums = Array.from({length:centroids.length}, ()=> new Array(dim).fill(0));
-    const counts = new Array(centroids.length).fill(0);
-    for(let i=0;i<n;i++){ const l=labels[i]; counts[l]++; for(let d=0;d<dim;d++) sums[l][d] += vectors[i][d]; }
-    let moved = false;
-    for(let c=0;c<centroids.length;c++){
-      if(counts[c]===0) continue;
-      const newC = sums[c].map(v=>v/counts[c]);
-      let diff=0; for(let d=0; d<dim; d++) diff += Math.abs(newC[d]-centroids[c][d]||0);
-      if(diff>1e-6) moved=true;
-      centroids[c] = newC;
-    }
-    if(!moved) break;
-  }
-  return { labels, centroids };
-}
-
-/* Axis discovery using TF‑IDF + KMeans */
-function discoverAxes(items, targetK=8){
-  const texts = items.map(i => i.text || '');
-  const tf = buildTfidf(texts);
-  if(tf.vectors.length === 0) return { axes: [], assignments: [] };
-  const K = Math.min(targetK, tf.vectors.length);
-  const { labels, centroids } = kmeans(tf.vectors, K);
-  const axes = centroids.map((c, idx) => {
-    // find top terms for centroid
-    const scores = tf.terms.map((t, i) => ({ t, score: c[i] || 0 })).sort((a,b)=>b.score-a.score);
-    const terms = scores.slice(0,6).map(s=>s.t);
-    return { id: `D${idx}`, label: terms.slice(0,3).join('-'), terms };
-  });
-  const assignments = items.map((it,i) => ({ id: it.id, axis: labels[i] }));
-  return { axes, assignments };
-}
-
-/* Axis scoring: combine known + discovered */
-function computeAxisScore(item, knownAxes, discoveredAxes){
-  const t = (item.text||'').toLowerCase();
-  let scoreKnown = 0;
-  for(const ax of knownAxes){
-    if(ax.keywords.some(k => t.includes(k))) scoreKnown += 1;
-  }
-  let scoreDisc = 0;
-  for(const ax of discoveredAxes){
-    if(ax.terms.some(k => t.includes(k))) scoreDisc += 1;
-  }
-  const denom = knownAxes.length + Math.max(1, discoveredAxes.length);
-  return clamp((scoreKnown + scoreDisc) / denom);
-}
-
-/* Geometry helpers */
-function coordsFromScores(arg3te, axisScore){
-  const theta = arg3te * Math.PI * 2;
-  const rho = 20 + axisScore * 120;
-  return { theta, rho, x: Math.cos(theta)*rho, y: Math.sin(theta)*rho, sector3: Math.floor(arg3te*3), sector4: Math.floor(arg3te*4) };
-}
-
-/* DATA MODEL & UI state */
-let STATE = {
-  level: 2,      // default 9x9
-  side: 9,
-  items: [],     // {id,text,confs}
-  scored: null,
-  discoveredAxes: [],
-  useMeKI: false
+window.mia = {
+    fusion: 60,
+    pulse: 0.6,
+    charge: 0.4
 };
 
-/* UI helpers */
-function gridSizeForLevel(level){
-  const side = Math.pow(3, level);
-  return { side, count: side * side };
-}
-
-function generateItemsForLevel(level){
-  const { side, count } = gridSizeForLevel(level);
-  const items = [];
-  for(let i=0;i<count;i++) items.push({ id: i, text: '', confs: [0.5,0.5,0.5] });
-  STATE.side = side;
-  STATE.items = items;
-}
-
-/* Render grid */
-function renderGrid(){
-  const grid = $('grid');
-  grid.innerHTML = '';
-  grid.style.gridTemplateColumns = `repeat(${STATE.side}, ${Math.max(40, Math.floor(560/STATE.side))}px)`;
-  grid.style.width = `${Math.min(560, STATE.side * Math.max(40, Math.floor(560/STATE.side)) + (STATE.side-1)*4)}px`;
-  STATE.items.forEach((it, idx) => {
-    const el = document.createElement('div');
-    el.className = it.text ? 'cell' : 'cell empty';
-    el.textContent = it.text ? (it.text.slice(0,6)) : (idx+1);
-    el.onclick = () => openEditor(idx);
-    grid.appendChild(el);
-    it._el = el;
-  });
-}
-
-/* Editor for a cell */
-function openEditor(idx){
-  const it = STATE.items[idx];
-  $('cellInfo').innerHTML = `
-    <div><strong>Zelle ${idx+1}</strong></div>
-    <div style="margin-top:8px"><label>Text</label><br><textarea id="editText" style="width:100%;height:80px">${escapeHtml(it.text)}</textarea></div>
-    <div style="margin-top:8px">
-      <label>c1 <input id="c1" type="range" min="0" max="1" step="0.01" value="${it.confs[0]}" /></label>
-      <label>c2 <input id="c2" type="range" min="0" max="1" step="0.01" value="${it.confs[1]}" /></label>
-      <label>c3 <input id="c3" type="range" min="0" max="1" step="0.01" value="${it.confs[2]}" /></label>
-    </div>
-    <div style="margin-top:8px"><button id="saveCell">Speichern</button> <button id="clearCell">Leeren</button> <button id="scoreCell">Score</button></div>
-  `;
-  $('saveCell').onclick = () => { it.text = $('editText').value.trim(); it.confs = [Number($('c1').value), Number($('c2').value), Number($('c3').value)]; it._el.textContent = it.text ? it.text.slice(0,6) : (idx+1); $('cellInfo').textContent = 'Gespeichert.'; };
-  $('clearCell').onclick = () => { it.text=''; it.confs=[0.5,0.5,0.5]; it._el.textContent = idx+1; $('cellInfo').textContent='Geloescht.'; };
-  $('scoreCell').onclick = () => { const s = scoreSingle(it); renderScorePopup(s); };
-}
-
-function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
-function renderScorePopup(s){
-  $('cellInfo').innerHTML = `<div><strong>Zelle ${s.id+1}</strong></div>
-  <pre>arg: ${s.eval.arg}\nxarg: ${s.eval.xarg}\narg3te: ${s.eval.arg3te}\naxis_score: ${s.axis_score.toFixed(3)}\nfinal: ${s.final_score.toFixed(4)}</pre>`;
-}
-
-/* Scoring pipeline (chunked) */
-let processing = { index: 0, timer: null };
-function scoreSingle(item){
-  const QI = Number($('qi').value), IQQ = Number($('iqq').value);
-  const e = evalRespo(item.confs || [0.5,0.5,0.5], QI, IQQ);
-  const axis_score = computeAxisScore(item, AXES_KNOWN, STATE.discoveredAxes || []);
-  const final = 0.6 * e.arg3te + 0.4 * axis_score;
-  return { id: item.id, text: item.text, confs: item.confs, eval: e, axis_score, final_score: Number(final.toFixed(6)), coords: coordsFromScores(e.arg3te, axis_score) };
-}
-
-function scoreAllChunked(onDone){
-  const batch = Number($('batchSize').value) || 9;
-  const items = STATE.items;
-  const QI = Number($('qi').value), IQQ = Number($('iqq').value);
-  const end = Math.min(items.length, processing.index + batch);
-  for(let i = processing.index; i < end; i++){
-    const s = scoreSingle(items[i]);
-    items[i].__scored = s;
-  }
-  processing.index = (end >= items.length) ? 0 : end;
-  if(processing.index === 0) {
-    onDone && onDone();
-  } else {
-    // schedule next chunk
-    processing.timer = requestAnimationFrame(()=> scoreAllChunked(onDone));
-  }
-}
-
-/* render top list & plot */
-function renderTop(){
-  const scored = STATE.items.map(it => it.__scored).filter(Boolean);
-  const sorted = scored.sort((a,b)=>b.final_score - a.final_score);
-  $('topList').innerHTML = sorted.slice(0,30).map(s => `<div style="padding:6px;border-bottom:1px solid #022"><strong>#${s.id+1}</strong> final=${s.final_score.toFixed(3)} arg3te=${s.eval.arg3te.toFixed(3)}<div class="small">${escapeHtml((s.text||'').slice(0,120))}</div></div>`).join('');
-  renderPlot(sorted.slice(0,200));
-  // multiscale: trivial single-level for now
-  const meanFinal = scored.length ? mean(scored.map(s=>s.final_score)) : 0;
-  $('multiInfo').textContent = `Level ${STATE.level} mean final=${meanFinal.toFixed(4)}`;
-}
-
-function renderPlot(items){
-  const svg = $('plot');
-  while(svg.firstChild) svg.removeChild(svg.firstChild);
-  // circle frame
-  const frame = document.createElementNS('http://www.w3.org/2000/svg','circle');
-  frame.setAttribute('r',120); frame.setAttribute('stroke','#033'); frame.setAttribute('fill','none');
-  svg.appendChild(frame);
-  items.forEach(it=>{
-    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
-    const x = it.coords.x, y = it.coords.y;
-    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 6);
-    c.setAttribute('fill', it.final_score > 0.8 ? '#6f6' : it.final_score > 0.5 ? '#6cf' : '#444');
-    c.setAttribute('stroke','#022');
-    c.addEventListener('mouseenter', ()=> $('cellInfo').textContent = `#${it.id+1} final=${it.final_score.toFixed(3)}\n${it.text||''}`);
-    c.addEventListener('mouseleave', ()=> $('cellInfo').textContent = 'Klicke eine Zelle für Details.');
-    svg.appendChild(c);
-  });
-}
-
-/* Discover axes & update STATE.discoveredAxes */
-function runDiscover(){
-  const targetK = Math.min(12, Math.max(3, Math.floor(Math.sqrt(STATE.items.length))));
-  const { axes } = discoverAxes(STATE.items, targetK);
-  STATE.discoveredAxes = axes;
-  // present to user
-  $('cellInfo').innerHTML = `<div><strong>Discovered Axes (${axes.length})</strong></div>${axes.map(a=>`<div class="small">${a.id}: ${a.label} — ${a.terms.join(', ')}</div>`).join('')}`;
-}
-
-/* Export JSON */
-function exportJSON(){
-  const out = {
-    meta: { level: STATE.level, side: STATE.side, QI: Number($('qi').value), IQQ: Number($('iqq').value), timestamp: Date.now() },
-    items: STATE.items.map(it => ({ id: it.id, text: it.text, confs: it.confs, scored: it.__scored || null })),
-    discoveredAxes: STATE.discoveredAxes || []
-  };
-  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = '9hoch9_respos.json'; a.click(); URL.revokeObjectURL(url);
-}
-
-/* Auto‑fill sample content to speed testing */
-function autoFill(){
-  STATE.items.forEach((it, idx) => {
-    it.text = `Respo ${idx+1} sample ${(idx%7===0)?'example':''} ${(idx%11===0)?'test':''}`;
-    it.confs = [+(0.4 + Math.random()*0.6).toFixed(2), +(0.4 + Math.random()*0.6).toFixed(2), +(0.4 + Math.random()*0.6).toFixed(2)];
-    if(it._el) it._el.textContent = it.text.slice(0,6);
-  });
-  $('cellInfo').textContent = 'Auto‑Fill done.';
-}
-
-/* Button wiring */
-$('genGrid').onclick = () => {
-  const lvl = Number($('levelSelect').value);
-  STATE.level = lvl;
-  const { side, count } = gridSizeForLevel(lvl);
-  generateItemsForLevel(lvl);
-  renderGrid();
-  $('cellInfo').textContent = `Grid ${side}×${side} erzeugt (${STATE.items.length} Zellen).`;
-};
-$('autoFill').onclick = () => autoFill();
-$('discoverAxes').onclick = () => runDiscover();
-$('scoreAll').onclick = () => {
-  if(processing.timer) cancelAnimationFrame(processing.timer);
-  processing.index = 0;
-  scoreAllChunked(()=> { renderTop(); $('cellInfo').textContent = 'Scoring abgeschlossen.'; });
-};
-$('exportJSON').onclick = () => exportJSON();
-$('useMeKI').onchange = (e) => { STATE.useMeKI = e.target.checked; $('cellInfo').textContent = `meKI ${STATE.useMeKI ? 'aktiv' : 'deaktiviert'}`; };
-
-/* Initialize default 9x9 */
-$('genGrid').click();
-
-/* If an external schnitt (schnitt.js or other modules) provide functions,
-   prefer them (e.g. external.schnitt.evalRespo etc.). This keeps backward compatibility. */
-if(external.schnitt){
-  console.info('External schnitt module loaded — delegating some functions if present.');
-  if(external.schnitt.evalRespo) evalRespo = external.schnitt.evalRespo;
-  if(external.schnitt.discoverAxes) discoverAxes = external.schnitt.discoverAxes;
-  if(external.schnitt.scoreSingle) scoreSingle = external.schnitt.scoreSingle;
-}
-
-import { PIPELINE_RUN8 } from "./pipeline.js";
-
-document.querySelector("#run8").addEventListener("click", () => {
-    const result = PIPELINE_RUN8(window.AIR_INPUT);
-    console.log("RUN 8:", result);
-});
-
-// ─── TEST: PIPELINE_RUN8 + AIR6D_MOVE ──────────────
-
-import { PIPELINE_RUN8 } from './PIPELINE_RUN8.js';
-import { AIR6D_MOVE } from './AIR6D_MOVE.js';
-
-const input = {
-    ion: { pulse: 0.8, warp: 0.3, charge: 0.5 },
-    echo: { resonance: 0.7, state: 'loud', warp: 0.2 },
-    mia: { fusion: 60, pulse: 0.6, charge: 0.4 },
-    formCore: FORM_CORE,
-    t: 0.5
+window.echo = {
+    resonance: 0.7,
+    state: "loud",
+    warp: 0.2
 };
 
-// RUN8
-const run8 = PIPELINE_RUN8(input);
-console.log('RUN8:', run8);
+window.ion = {
+    pulse: 0.8,
+    warp: 0.3,
+    charge: 0.5
+};
 
-// AIR6D
-const air6d = AIR6D_MOVE(input);
-console.log('AIR6D:', air6d);
+// ─────────────────────────────────────────────
+// 3) RUN 8 – PIPELINE + AIR6D
+// ─────────────────────────────────────────────
 
-// Beide laufen mit gleicher Struktur!
+function RUN8() {
+
+    const input = {
+        ion: window.ion,
+        echo: window.echo,
+        mia: window.mia,
+        formCore: FORM_CORE,
+        t: performance.now() / 1000
+    };
+
+    // Pipeline
+    const run8 = PIPELINE_RUN8(input);
+    console.log("RUN8:", run8);
+
+    // AIR6D Move
+    const air6d = AIR6D_MOVE(input);
+    console.log("AIR6D:", air6d);
+}
+
+// ─────────────────────────────────────────────
+// 4) BUTTON BINDING
+// ─────────────────────────────────────────────
+
+document.querySelector("#run8").addEventListener("click", RUN8);
+
 </script>
-</body>
-</html>
