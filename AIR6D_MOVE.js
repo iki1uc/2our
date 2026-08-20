@@ -1,4 +1,5 @@
-// AIR6D_MOVE.js – repariert & kompatibel mit RUN8
+// AIR6D_MOVE.js – 6D Bewegung
+// Einheitliche Struktur – kompatibel mit PIPELINE_RUN8
 
 import { VEC_CORE } from "./VEC_CORE.js";
 import { FLX_CORE } from "./FLX_CORE.js";
@@ -11,25 +12,25 @@ export function AIR6D_MOVE(input) {
     // ─── Einheitliche Struktur ──────────────────────────
     const { ion, echo, mia, formCore, t = 0 } = input;
 
-    // Stage 0 – VEC (Pulse, Warp, Charge)
+    // Stage 0 – VEC
     const vec = VEC_CORE({
         pulse: ion?.pulse ?? mia?.pulse ?? 0,
         warp: ion?.warp ?? echo?.warp ?? 0,
         charge: ion?.charge ?? mia?.charge ?? 0
     });
 
-    // Stage 1 – FLX (Resonanzkrümmung)
+    // Stage 1 – FLX
     const flx = FLX_CORE({
         amplitude: vec.x,
         resonance: echo?.resonance ?? 0,
         origin: vec.z
     });
 
-    // Stage 2 – FORM (Etage, Modul, Aufgabe)
+    // Stage 2 – FORM
     const matrix = FORM_MATRIX(formCore || FORM_CORE || []);
     const form = FORM_ENGINE(matrix, t);
 
-    // Stage 8 – SYN (Synchronisation)
+    // Stage 8 – SYN
     const syn = SYN_CORE(
         mia || { fusion: 50 },
         echo || { state: 'loud', resonance: 30 },
