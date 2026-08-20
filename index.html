@@ -448,7 +448,29 @@ document.querySelector("#run8").addEventListener("click", () => {
     const result = PIPELINE_RUN8(window.AIR_INPUT);
     console.log("RUN 8:", result);
 });
-</script>
 
+// ─── TEST: PIPELINE_RUN8 + AIR6D_MOVE ──────────────
+
+import { PIPELINE_RUN8 } from './PIPELINE_RUN8.js';
+import { AIR6D_MOVE } from './AIR6D_MOVE.js';
+
+const input = {
+    ion: { pulse: 0.8, warp: 0.3, charge: 0.5 },
+    echo: { resonance: 0.7, state: 'loud', warp: 0.2 },
+    mia: { fusion: 60, pulse: 0.6, charge: 0.4 },
+    formCore: FORM_CORE,
+    t: 0.5
+};
+
+// RUN8
+const run8 = PIPELINE_RUN8(input);
+console.log('RUN8:', run8);
+
+// AIR6D
+const air6d = AIR6D_MOVE(input);
+console.log('AIR6D:', air6d);
+
+// Beide laufen mit gleicher Struktur!
+</script>
 </body>
 </html>
