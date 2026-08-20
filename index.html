@@ -1,852 +1,447 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>QUANT · SYN · FORM · VECTOR — Full Integration</title>
-    <style>
-        :root {
-            --bg: #0a0a12;
-            --fg: #0f0;
-            --tri: #f44;
-            --form: #4f4;
-            --quant: #f4f;
-            --syn: #4ff;
-            --vector: #ff4;
-            --border: #1a1a2a;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            background: var(--bg);
-            color: var(--fg);
-            font-family: 'Consolas', monospace;
-            padding: 10px;
-            min-height: 100vh;
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            gap: 8px;
-        }
-
-        /* HEADER */
-        header {
-            border-bottom: 2px solid var(--tri);
-            padding-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        header h1 {
-            font-size: 18px;
-            background: linear-gradient(90deg, var(--tri), var(--form), var(--quant));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        #status-led {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #333;
-            transition: 0.3s;
-        }
-        #status-led.on { background: #0f0; box-shadow: 0 0 20px #0f0; }
-        #status-led.off { background: #f00; }
-        #status-led.busy { background: #ff0; animation: blink 0.5s infinite; }
-        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.2; } }
-
-        /* MAIN LAYOUT */
-        main {
-            display: grid;
-            grid-template-columns: 3fr 2fr;
-            gap: 8px;
-            min-height: 500px;
-        }
-
-        /* CANVAS PANEL */
-        #canvas-panel {
-            background: #05050a;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-        }
-        #canvas-panel .header {
-            display: flex;
-            justify-content: space-between;
-            padding-bottom: 4px;
-            border-bottom: 1px solid var(--border);
-        }
-        #canvas-panel .header h3 { color: var(--tri); font-size: 12px; }
-        #canvas-panel .header span { font-size: 10px; color: #666; }
-        #canvas-wrap {
-            flex: 1;
-            background: #000;
-            border-radius: 4px;
-            overflow: hidden;
-            min-height: 250px;
-            position: relative;
-        }
-        #canvas-wrap canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        /* CONTROLS */
-        #controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            padding: 4px 0;
-        }
-        button {
-            background: #111;
-            color: var(--fg);
-            border: 1px solid #333;
-            padding: 3px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 10px;
-            transition: 0.2s;
-        }
-        button:hover { background: #1a1a2a; border-color: var(--fg); }
-        button:active { transform: scale(0.95); }
-        button.primary { border-color: var(--tri); color: var(--tri); }
-        button.primary:hover { background: var(--tri); color: #000; }
-        button.form-btn { border-color: var(--form); color: var(--form); }
-        button.form-btn:hover { background: var(--form); color: #000; }
-        button.quant-btn { border-color: var(--quant); color: var(--quant); }
-        button.quant-btn:hover { background: var(--quant); color: #000; }
-        button.syn-btn { border-color: var(--syn); color: var(--syn); }
-        button.syn-btn:hover { background: var(--syn); color: #000; }
-        button.danger { border-color: #f44; color: #f44; }
-        button.danger:hover { background: #f44; color: #000; }
-        select, input[type="range"] {
-            background: #111;
-            color: var(--fg);
-            border: 1px solid #333;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: inherit;
-            font-size: 9px;
-        }
-        input[type="range"] { width: 60px; }
-
-        /* DATA PANEL */
-        #data-panel {
-            background: #05050a;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-        }
-        #data-panel .header h3 { color: var(--form); font-size: 12px; }
-
-        #tabs {
-            display: flex;
-            gap: 2px;
-            flex-wrap: wrap;
-            padding: 2px 0;
-            border-bottom: 1px solid var(--border);
-        }
-        #tabs button {
-            background: transparent;
-            border: none;
-            color: #666;
-            padding: 2px 8px;
-            font-size: 9px;
-            cursor: pointer;
-            border-radius: 3px;
-            transition: 0.2s;
-        }
-        #tabs button:hover { background: #1a1a2a; }
-        #tabs button.active {
-            color: #fff;
-            background: #1a1a2a;
-            border-bottom: 2px solid var(--form);
-        }
-
-        #data-content {
-            flex: 1;
-            overflow-y: auto;
-            font-size: 9px;
-            line-height: 1.4;
-            min-height: 150px;
-            max-height: 350px;
-            padding: 4px 0;
-        }
-        #data-content .entry {
-            padding: 1px 0;
-            border-bottom: 1px solid #0a0a12;
-        }
-        #data-content .entry .time { color: #444; }
-        #data-content .entry .msg { color: #8af; }
-        #data-content .entry .msg.ok { color: #4f4; }
-        #data-content .entry .msg.err { color: #f44; }
-        #data-content .entry .msg.warn { color: #ff4; }
-        #data-content .entry .msg.tri { color: var(--tri); }
-        #data-content .entry .msg.form { color: var(--form); }
-        #data-content .entry .msg.quant { color: var(--quant); }
-        #data-content .entry .msg.syn { color: var(--syn); }
-        #data-content pre {
-            background: #0a0a12;
-            padding: 4px;
-            border-radius: 3px;
-            font-size: 8px;
-            color: #8af;
-            margin: 2px 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        /* MODULE STATUS */
-        #module-status {
-            background: #05050a;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 4px 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px 12px;
-            font-size: 9px;
-            color: #666;
-        }
-        #module-status .mod {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        #module-status .mod .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #333;
-        }
-        #module-status .mod .dot.loaded { background: #4f4; }
-        #module-status .mod .dot.error { background: #f44; }
-        #module-status .mod .dot.busy { background: #ff4; animation: blink 0.5s infinite; }
-
-        @media (max-width: 900px) {
-            main { grid-template-columns: 1fr; }
-        }
-    </style>
-</head>
-<body>
-
-<!-- HEADER -->
-<header>
-    <h1>🔺 QUANT · SYN · FORM · VECTOR — Full Integration</h1>
-    <div style="display:flex;align-items:center;gap:10px;">
-        <span id="status-led" class="off"></span>
-        <span id="clock" style="font-size:11px;color:#666;">⏱️ --:--:--</span>
-        <span id="cycle-count" style="font-size:10px;color:#444;">Zyklus 0</span>
-    </div>
-</header>
-
-<!-- MAIN -->
-<main>
-    <!-- CANVAS -->
-    <div id="canvas-panel">
-        <div class="header">
-            <h3>🔺 TRIANGLE · Sink (A) + Source (B)</h3>
-            <span id="stats">P: 0 | S: 0 | E: 0</span>
-        </div>
-        <div id="canvas-wrap">
-            <canvas id="simCanvas"></canvas>
-        </div>
-        <div id="controls">
-            <button class="primary" id="btn-boot">▶ BOOT</button>
-            <button id="btn-triangle">🔺 TRI</button>
-            <button class="form-btn" id="btn-form">📐 FORM</button>
-            <button class="quant-btn" id="btn-quant">🌀 QUANT</button>
-            <button class="syn-btn" id="btn-syn">🔄 SYN</button>
-            <button id="btn-step">⏭ STEP</button>
-            <button class="danger" id="btn-reset">⟲ RESET</button>
-            <label style="font-size:9px;color:#666;">Speed:
-                <select id="speedSelect">
-                    <option value="0.5">0.5x</option>
-                    <option value="1" selected>1x</option>
-                    <option value="2">2x</option>
-                    <option value="4">4x</option>
-                </select>
-            </label>
-            <label style="font-size:9px;color:#666;">Strength:
-                <input type="range" id="sinkStrength" min="10" max="400" value="150">
-            </label>
-        </div>
-    </div>
-
-    <!-- DATA -->
-    <div id="data-panel">
-        <div class="header"><h3>📊 DATA · Analysis</h3></div>
-        <div id="tabs">
-            <button class="active" data-tab="log">📋 Log</button>
-            <button data-tab="form">📐 FORM</button>
-            <button data-tab="quant">🌀 QUANT</button>
-            <button data-tab="syn">🔄 SYN</button>
-            <button data-tab="vector">📐 VECTOR</button>
-            <button data-tab="matrix">📊 MATRIX</button>
-        </div>
-        <div id="data-content">
-            <div class="entry"><span class="time">[INIT]</span> <span class="msg">QUANT·SYN·FORM·VECTOR — Full Integration</span></div>
-            <div class="entry"><span class="time">[INIT]</span> <span class="msg">📦 Module: FORM_CORE, FORM_ENGINE, FORM_MATRIX, QUANT_CORE, opta, syn, vector</span></div>
-            <div class="entry"><span class="time">[INIT]</span> <span class="msg">🔺 Warte auf BOOT...</span></div>
-        </div>
-    </div>
-</main>
-
-<!-- MODULE STATUS -->
-<div id="module-status">
-    <span class="mod"><span class="dot" id="mod-form-core"></span> FORM_CORE</span>
-    <span class="mod"><span class="dot" id="mod-form-engine"></span> FORM_ENGINE</span>
-    <span class="mod"><span class="dot" id="mod-form-matrix"></span> FORM_MATRIX</span>
-    <span class="mod"><span class="dot" id="mod-quant-core"></span> QUANT_CORE</span>
-    <span class="mod"><span class="dot" id="mod-opta"></span> opta</span>
-    <span class="mod"><span class="dot" id="mod-syn"></span> syn</span>
-    <span class="mod"><span class="dot" id="mod-vector"></span> vector</span>
-    <span style="margin-left:auto;font-size:8px;color:#444;">v3.0 · 3-9-27-81</span>
-</div>
-
-<!-- ============================================================ -->
-<!-- SCRIPT — ALLE MODULE + SYN SIMULATION INTEGRIERT -->
-<!-- ============================================================ -->
-<script type="importmap">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>9hoch9 · ULTRA · Respo Engine — ATOM</title>
+<meta name="description" content="9×9 Respo Engine — QI/IQQ, φ‑Multiskala, Axis Discovery, TF‑IDF/KMeans fallback, meKI‑friendly metadata" />
+<!-- Machine‑readable metadata for meKI / automated agents -->
+<script type="application/ld+json">
 {
-    "imports": {
-        "./FORM_CORE.js": "./FORM_CORE.js",
-        "./FORM_ENGINE.js": "./FORM_ENGINE.js",
-        "./FORM_MATRIX.js": "./FORM_MATRIX.js",
-        "./QUANT_CORE.js": "./QUANT_CORE.js",
-        "./opta.js": "./opta.js",
-        "./syn.js": "./syn.js",
-        "./vector.js": "./vector.js"
-    }
+  "@context": "http://schema.org",
+  "@type": "SoftwareSourceCode",
+  "name": "9hoch9 Respo Engine",
+  "description": "Interactive 9×9 Respo evaluation & discovery engine using QI/IQQ, phi weights, axis discovery and multiscale aggregation. Exposes machine JSON for meKI.",
+  "programmingLanguage": "JavaScript",
+  "codeRepository": "https://github.com/iki1uc/ATOM",
+  "keywords": ["respo","eval","QI","IQQ","phi","multiscale","axis","discovery","meKI"]
 }
 </script>
 
+<style>
+  :root{--bg:#000;--fg:#7ff;--accent:#6cf}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Consolas,monospace}
+  header{display:flex;align-items:center;gap:12px;padding:12px}
+  .card{background:#041;padding:12px;border-radius:8px;border:1px solid #063}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input,button,textarea{background:#001;color:var(--fg);border:1px solid #034;padding:6px;border-radius:6px}
+  #grid{display:grid;gap:4px;align-self:flex-start;margin-top:12px}
+  .cell{width:56px;height:56px;display:flex;align-items:center;justify-content:center;border-radius:6px;cursor:pointer;user-select:none;background:#071;border:1px solid #033}
+  .cell.empty{background:#011;border:1px dashed #022;color:#446}
+  #detail{min-width:340px;max-width:420px;margin-left:12px}
+  .muted{color:#5a7;font-size:13px}
+  footer{padding:12px;color:#6f6;font-size:13px}
+  .row{display:flex;gap:8px;align-items:center}
+  .small{font-size:12px;color:#9fb}
+  #plot{background:#000;border:1px solid #033;border-radius:8px}
+  pre{background:#001;padding:8px;border-radius:6px;overflow:auto;max-height:240px}
+  .book{margin-top:12px;padding:8px;border-radius:6px;background:#021;border:1px solid #024}
+  .btn-primary{background:var(--accent);color:#000;border:none;padding:8px 10px;border-radius:6px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1 style="margin:0">9hoch9 · ULTRA · Respo Engine</h1>
+    <div class="muted">Kompatibel mit 3×3 → 9×9 → 27×27 / φ‑Multiskala / meKI‑ready</div>
+  </div>
+  <div style="margin-left:auto" class="small">Version: interactive · Local only · Read‑only by default</div>
+</header>
+
+<section class="card">
+  <div class="controls">
+    <label>Level:
+      <select id="levelSelect">
+        <option value="1">3×3 (9)</option>
+        <option value="2" selected>9×9 (81)</option>
+        <option value="3">27×27 (729)</option>
+      </select>
+    </label>
+
+    <label>QI <input id="qi" type="range" min="0" max="1" step="0.01" value="0.65" /></label>
+    <label>IQQ <input id="iqq" type="range" min="0" max="1" step="0.01" value="0.35" /></label>
+
+    <label>Batch size:
+      <input id="batchSize" type="number" min="1" max="128" step="1" value="9" style="width:64px" />
+    </label>
+
+    <button id="genGrid" class="btn-primary">Erzeuge Grid</button>
+    <button id="autoFill" class="btn-primary">Auto‑Fill Respos</button>
+    <button id="discoverAxes">Discover Axes</button>
+    <button id="scoreAll">Score All</button>
+    <button id="exportJSON">Export JSON</button>
+
+    <label style="margin-left:auto"><input id="useMeKI" type="checkbox" /> meKI integration (wenn verfügbar)</label>
+  </div>
+
+  <div style="display:flex;gap:12px;margin-top:12px;align-items:flex-start">
+    <div id="grid" aria-label="Grid"></div>
+
+    <div id="detail" class="card">
+      <div><strong>Detail / Aktionen</strong></div>
+      <div id="cellInfo" style="margin-top:8px">Klicke eine Zelle für Edit / Score.</div>
+
+      <div style="margin-top:8px">
+        <div class="small">Top Candidates</div>
+        <div id="topList" style="max-height:220px;overflow:auto;margin-top:6px"></div>
+      </div>
+
+      <div style="margin-top:8px">
+        <div class="small">Multiskala (φ‑Gewichte)</div>
+        <div id="multiInfo" class="small">—</div>
+      </div>
+
+      <svg id="plot" width="300" height="300" viewBox="-150 -150 300 300" style="margin-top:8px">
+        <circle r="120" fill="none" stroke="#033"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <div class="book">
+    <h3>Buchbar & KI‑freundlich</h3>
+    <p class="small">
+      Dieses UI exportiert standardisiertes JSON für jede Respo (id, text, confs, eval, axis_presence, axis_score, final_score).
+      Die <code>application/ld+json</code> oben hilft meKI‑Agenten, das Modul zu entdecken. Wenn ein meKI Modul (meKI.js) vorliegt, wird es zur dynamischen QI/IQQ‑/axisWeight‑Schätzung verwendet.
+    </p>
+    <details>
+      <summary class="small">Pipeline (klick für Details)</summary>
+      <ol class="small">
+        <li>Discovery → Textsammlung aus Zellen</li>
+        <li>Normalisierung → default confs (0.5) falls leer</li>
+        <li>Eval → arg / xarg / arg3te (deine Formel)</li>
+        <li>Axis mapping → known keyword match + discovered clusters (TF‑IDF + KMeans)</li>
+        <li>Multiskala → φ‑Gewichte über Levels</li>
+        <li>Final → final_score = 0.6·arg3te + 0.4·axis_score (configurable)</li>
+      </ol>
+    </details>
+  </div>
+</section>
+
+<footer>
+  © 2026 iki1uc wieimmer — Export/Import JSON available — No external network calls by default.
+</footer>
+
 <script type="module">
-// ============================================================
-// 1. IMPORTS — ALLE MODULE
-// ============================================================
-import FORM_CORE from './FORM_CORE.js';
-import FORM_ENGINE from './FORM_ENGINE.js';
-import FORM_MATRIX from './FORM_MATRIX.js';
-import QUANT_CORE from './QUANT_CORE.js';
-import { Opta } from './opta.js';
-import { SYN_CORE } from './syn.js';
-import { Vector } from './vector.js';
+/* 9hoch9 index — integrates with schnitt.js if present, else uses internal implementations.
+   Produces machine JSON suitable for meKI ingestion (if useMeKI checked).
+*/
 
-// ============================================================
-// 2. MODULE-REGISTRY
-// ============================================================
-const MODULES = {
-    formCore: { name: 'FORM_CORE', mod: FORM_CORE, loaded: false },
-    formEngine: { name: 'FORM_ENGINE', mod: FORM_ENGINE, loaded: false },
-    formMatrix: { name: 'FORM_MATRIX', mod: FORM_MATRIX, loaded: false },
-    quantCore: { name: 'QUANT_CORE', mod: QUANT_CORE, loaded: false },
-    opta: { name: 'opta', mod: Opta, loaded: false },
-    syn: { name: 'syn', mod: SYN_CORE, loaded: false },
-    vector: { name: 'vector', mod: Vector, loaded: false }
+/* Config */
+const PHI = 1.61803398875;
+const DEFAULT_QI = 0.65, DEFAULT_IQQ = 0.35;
+const AXES_KNOWN = [
+  { name:'conceptual', keywords:['axiom','theory','concept','idea'] },
+  { name:'technical', keywords:['code','implementation','api','function','module'] },
+  { name:'repro', keywords:['example','reproduce','dataset','script','seed','steps'] },
+  { name:'usability', keywords:['guide','readme','usage','install','ui'] },
+  { name:'privacy', keywords:['email','pii','personal','secret','key','password'] },
+  { name:'performance', keywords:['perf','speed','optimi','latency','scale'] },
+  { name:'tests', keywords:['test','unit','assert','verify','expected'] },
+  { name:'ethics', keywords:['ethic','bias','impact','safety'] },
+  { name:'integration', keywords:['integrate','plugin','adapter','interop'] }
+];
+
+/* Utilities */
+const $ = id => document.getElementById(id);
+function clamp(v,a=0,b=1){ return Math.max(a, Math.min(b, v)); }
+function mean(arr){ return arr.length ? arr.reduce((s,x)=>s+x,0)/arr.length : 0; }
+function phiWeights(nMax){ const ws = Array.from({length:nMax+1},(_,n)=>Math.pow(1/PHI,n)); const s = ws.reduce((a,b)=>a+b,0); return ws.map(w=>w/s); }
+
+/* Try to find external schnitt / helper module provided by you */
+let external = {};
+try { external.schnitt = await import('./schnitt.js'); } catch(e){ external.schnitt = null; }
+
+/* Fallback implementations if not provided */
+function evalRespo(confs, QI, IQQ){
+  const base = mean(confs);
+  const maxc = Math.max(...confs), minc = Math.min(...confs);
+  const variance = maxc - minc;
+  const combined = clamp(QI*base + (1 - IQQ)*maxc);
+  const arg = combined;
+  const xarg = variance;
+  const arg3te = Number((combined * (1 - xarg)).toFixed(6));
+  return { base, maxc, minc, variance, arg, xarg, arg3te };
+}
+
+/* Simple TF‑IDF builder (lightweight) */
+function buildTfidf(corpus){
+  const docs = corpus.map(t => t.toLowerCase().replace(/[^\p{Letter}\p{Number}\s]/gu,' ').split(/\s+/).filter(Boolean));
+  const vocabMap = new Map();
+  docs.forEach(d=> d.forEach(w=> vocabMap.set(w, (vocabMap.get(w)||0)+1)));
+  const terms = Array.from(vocabMap.keys());
+  const docCount = docs.length;
+  const idf = terms.map(t => Math.log(docCount / (1 + docs.filter(d=>d.includes(t)).length)));
+  const vectors = docs.map(d=>{
+    const tf = terms.map(t => d.filter(x=>x===t).length / (d.length||1));
+    return tf.map((tfi,i)=>tfi * idf[i]);
+  });
+  return { terms, vectors };
+}
+function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function norm(a){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*a[i]; return Math.sqrt(s)+1e-12; }
+function cosine(a,b){ return dot(a,b)/(norm(a)*norm(b)); }
+
+/* Simple kmeans (small K, naive) */
+function kmeans(vectors, K=6, maxIter=40){
+  const n = vectors.length;
+  const dim = vectors[0]?.length || 0;
+  if(n===0) return { labels: [], centroids: [] };
+  let centroids = [];
+  const picks = new Set();
+  while(centroids.length < Math.min(K,n)){
+    const r = Math.floor(Math.random()*n);
+    if(!picks.has(r)){ picks.add(r); centroids.push(vectors[r].slice()); }
+  }
+  let labels = new Array(n).fill(0);
+  for(let it=0; it<maxIter; it++){
+    for(let i=0;i<n;i++){
+      let best=0, bestSim=-Infinity;
+      for(let c=0;c<centroids.length;c++){
+        const sim = cosine(vectors[i], centroids[c]);
+        if(sim>bestSim){ bestSim = sim; best = c; }
+      }
+      labels[i]=best;
+    }
+    const sums = Array.from({length:centroids.length}, ()=> new Array(dim).fill(0));
+    const counts = new Array(centroids.length).fill(0);
+    for(let i=0;i<n;i++){ const l=labels[i]; counts[l]++; for(let d=0;d<dim;d++) sums[l][d] += vectors[i][d]; }
+    let moved = false;
+    for(let c=0;c<centroids.length;c++){
+      if(counts[c]===0) continue;
+      const newC = sums[c].map(v=>v/counts[c]);
+      let diff=0; for(let d=0; d<dim; d++) diff += Math.abs(newC[d]-centroids[c][d]||0);
+      if(diff>1e-6) moved=true;
+      centroids[c] = newC;
+    }
+    if(!moved) break;
+  }
+  return { labels, centroids };
+}
+
+/* Axis discovery using TF‑IDF + KMeans */
+function discoverAxes(items, targetK=8){
+  const texts = items.map(i => i.text || '');
+  const tf = buildTfidf(texts);
+  if(tf.vectors.length === 0) return { axes: [], assignments: [] };
+  const K = Math.min(targetK, tf.vectors.length);
+  const { labels, centroids } = kmeans(tf.vectors, K);
+  const axes = centroids.map((c, idx) => {
+    // find top terms for centroid
+    const scores = tf.terms.map((t, i) => ({ t, score: c[i] || 0 })).sort((a,b)=>b.score-a.score);
+    const terms = scores.slice(0,6).map(s=>s.t);
+    return { id: `D${idx}`, label: terms.slice(0,3).join('-'), terms };
+  });
+  const assignments = items.map((it,i) => ({ id: it.id, axis: labels[i] }));
+  return { axes, assignments };
+}
+
+/* Axis scoring: combine known + discovered */
+function computeAxisScore(item, knownAxes, discoveredAxes){
+  const t = (item.text||'').toLowerCase();
+  let scoreKnown = 0;
+  for(const ax of knownAxes){
+    if(ax.keywords.some(k => t.includes(k))) scoreKnown += 1;
+  }
+  let scoreDisc = 0;
+  for(const ax of discoveredAxes){
+    if(ax.terms.some(k => t.includes(k))) scoreDisc += 1;
+  }
+  const denom = knownAxes.length + Math.max(1, discoveredAxes.length);
+  return clamp((scoreKnown + scoreDisc) / denom);
+}
+
+/* Geometry helpers */
+function coordsFromScores(arg3te, axisScore){
+  const theta = arg3te * Math.PI * 2;
+  const rho = 20 + axisScore * 120;
+  return { theta, rho, x: Math.cos(theta)*rho, y: Math.sin(theta)*rho, sector3: Math.floor(arg3te*3), sector4: Math.floor(arg3te*4) };
+}
+
+/* DATA MODEL & UI state */
+let STATE = {
+  level: 2,      // default 9x9
+  side: 9,
+  items: [],     // {id,text,confs}
+  scored: null,
+  discoveredAxes: [],
+  useMeKI: false
 };
 
-// ============================================================
-// 3. DOM-REFERENZEN
-// ============================================================
-const canvas = document.getElementById('simCanvas');
-const ctx = canvas.getContext('2d');
-const logDiv = document.getElementById('data-content');
-const statusLed = document.getElementById('status-led');
-const clockEl = document.getElementById('clock');
-const cycleCountEl = document.getElementById('cycle-count');
-const statsEl = document.getElementById('stats');
-
-const btnBoot = document.getElementById('btn-boot');
-const btnTriangle = document.getElementById('btn-triangle');
-const btnForm = document.getElementById('btn-form');
-const btnQuant = document.getElementById('btn-quant');
-const btnSyn = document.getElementById('btn-syn');
-const btnStep = document.getElementById('btn-step');
-const btnReset = document.getElementById('btn-reset');
-const speedSelect = document.getElementById('speedSelect');
-const sinkStrengthInput = document.getElementById('sinkStrength');
-
-// ============================================================
-// 4. CANVAS SETUP
-// ============================================================
-function resizeCanvas() {
-    const wrap = canvas.parentElement;
-    canvas.width = wrap.clientWidth || 500;
-    canvas.height = wrap.clientHeight || 350;
+/* UI helpers */
+function gridSizeForLevel(level){
+  const side = Math.pow(3, level);
+  return { side, count: side * side };
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
 
-// ============================================================
-// 5. STATE
-// ============================================================
-const state = {
-    cycle: 0,
-    running: false,
-    simTime: 0,
-    particles: [],
-    sinks: [],
-    sources: [],
-    events: [],
-    stars: [],
-    triangle: null,
-    formData: null,
-    quantData: null,
-    synData: null,
-    vectorData: null,
-    lastTime: 0
+function generateItemsForLevel(level){
+  const { side, count } = gridSizeForLevel(level);
+  const items = [];
+  for(let i=0;i<count;i++) items.push({ id: i, text: '', confs: [0.5,0.5,0.5] });
+  STATE.side = side;
+  STATE.items = items;
+}
+
+/* Render grid */
+function renderGrid(){
+  const grid = $('grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${STATE.side}, ${Math.max(40, Math.floor(560/STATE.side))}px)`;
+  grid.style.width = `${Math.min(560, STATE.side * Math.max(40, Math.floor(560/STATE.side)) + (STATE.side-1)*4)}px`;
+  STATE.items.forEach((it, idx) => {
+    const el = document.createElement('div');
+    el.className = it.text ? 'cell' : 'cell empty';
+    el.textContent = it.text ? (it.text.slice(0,6)) : (idx+1);
+    el.onclick = () => openEditor(idx);
+    grid.appendChild(el);
+    it._el = el;
+  });
+}
+
+/* Editor for a cell */
+function openEditor(idx){
+  const it = STATE.items[idx];
+  $('cellInfo').innerHTML = `
+    <div><strong>Zelle ${idx+1}</strong></div>
+    <div style="margin-top:8px"><label>Text</label><br><textarea id="editText" style="width:100%;height:80px">${escapeHtml(it.text)}</textarea></div>
+    <div style="margin-top:8px">
+      <label>c1 <input id="c1" type="range" min="0" max="1" step="0.01" value="${it.confs[0]}" /></label>
+      <label>c2 <input id="c2" type="range" min="0" max="1" step="0.01" value="${it.confs[1]}" /></label>
+      <label>c3 <input id="c3" type="range" min="0" max="1" step="0.01" value="${it.confs[2]}" /></label>
+    </div>
+    <div style="margin-top:8px"><button id="saveCell">Speichern</button> <button id="clearCell">Leeren</button> <button id="scoreCell">Score</button></div>
+  `;
+  $('saveCell').onclick = () => { it.text = $('editText').value.trim(); it.confs = [Number($('c1').value), Number($('c2').value), Number($('c3').value)]; it._el.textContent = it.text ? it.text.slice(0,6) : (idx+1); $('cellInfo').textContent = 'Gespeichert.'; };
+  $('clearCell').onclick = () => { it.text=''; it.confs=[0.5,0.5,0.5]; it._el.textContent = idx+1; $('cellInfo').textContent='Geloescht.'; };
+  $('scoreCell').onclick = () => { const s = scoreSingle(it); renderScorePopup(s); };
+}
+
+function escapeHtml(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function renderScorePopup(s){
+  $('cellInfo').innerHTML = `<div><strong>Zelle ${s.id+1}</strong></div>
+  <pre>arg: ${s.eval.arg}\nxarg: ${s.eval.xarg}\narg3te: ${s.eval.arg3te}\naxis_score: ${s.axis_score.toFixed(3)}\nfinal: ${s.final_score.toFixed(4)}</pre>`;
+}
+
+/* Scoring pipeline (chunked) */
+let processing = { index: 0, timer: null };
+function scoreSingle(item){
+  const QI = Number($('qi').value), IQQ = Number($('iqq').value);
+  const e = evalRespo(item.confs || [0.5,0.5,0.5], QI, IQQ);
+  const axis_score = computeAxisScore(item, AXES_KNOWN, STATE.discoveredAxes || []);
+  const final = 0.6 * e.arg3te + 0.4 * axis_score;
+  return { id: item.id, text: item.text, confs: item.confs, eval: e, axis_score, final_score: Number(final.toFixed(6)), coords: coordsFromScores(e.arg3te, axis_score) };
+}
+
+function scoreAllChunked(onDone){
+  const batch = Number($('batchSize').value) || 9;
+  const items = STATE.items;
+  const QI = Number($('qi').value), IQQ = Number($('iqq').value);
+  const end = Math.min(items.length, processing.index + batch);
+  for(let i = processing.index; i < end; i++){
+    const s = scoreSingle(items[i]);
+    items[i].__scored = s;
+  }
+  processing.index = (end >= items.length) ? 0 : end;
+  if(processing.index === 0) {
+    onDone && onDone();
+  } else {
+    // schedule next chunk
+    processing.timer = requestAnimationFrame(()=> scoreAllChunked(onDone));
+  }
+}
+
+/* render top list & plot */
+function renderTop(){
+  const scored = STATE.items.map(it => it.__scored).filter(Boolean);
+  const sorted = scored.sort((a,b)=>b.final_score - a.final_score);
+  $('topList').innerHTML = sorted.slice(0,30).map(s => `<div style="padding:6px;border-bottom:1px solid #022"><strong>#${s.id+1}</strong> final=${s.final_score.toFixed(3)} arg3te=${s.eval.arg3te.toFixed(3)}<div class="small">${escapeHtml((s.text||'').slice(0,120))}</div></div>`).join('');
+  renderPlot(sorted.slice(0,200));
+  // multiscale: trivial single-level for now
+  const meanFinal = scored.length ? mean(scored.map(s=>s.final_score)) : 0;
+  $('multiInfo').textContent = `Level ${STATE.level} mean final=${meanFinal.toFixed(4)}`;
+}
+
+function renderPlot(items){
+  const svg = $('plot');
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  // circle frame
+  const frame = document.createElementNS('http://www.w3.org/2000/svg','circle');
+  frame.setAttribute('r',120); frame.setAttribute('stroke','#033'); frame.setAttribute('fill','none');
+  svg.appendChild(frame);
+  items.forEach(it=>{
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    const x = it.coords.x, y = it.coords.y;
+    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 6);
+    c.setAttribute('fill', it.final_score > 0.8 ? '#6f6' : it.final_score > 0.5 ? '#6cf' : '#444');
+    c.setAttribute('stroke','#022');
+    c.addEventListener('mouseenter', ()=> $('cellInfo').textContent = `#${it.id+1} final=${it.final_score.toFixed(3)}\n${it.text||''}`);
+    c.addEventListener('mouseleave', ()=> $('cellInfo').textContent = 'Klicke eine Zelle für Details.');
+    svg.appendChild(c);
+  });
+}
+
+/* Discover axes & update STATE.discoveredAxes */
+function runDiscover(){
+  const targetK = Math.min(12, Math.max(3, Math.floor(Math.sqrt(STATE.items.length))));
+  const { axes } = discoverAxes(STATE.items, targetK);
+  STATE.discoveredAxes = axes;
+  // present to user
+  $('cellInfo').innerHTML = `<div><strong>Discovered Axes (${axes.length})</strong></div>${axes.map(a=>`<div class="small">${a.id}: ${a.label} — ${a.terms.join(', ')}</div>`).join('')}`;
+}
+
+/* Export JSON */
+function exportJSON(){
+  const out = {
+    meta: { level: STATE.level, side: STATE.side, QI: Number($('qi').value), IQQ: Number($('iqq').value), timestamp: Date.now() },
+    items: STATE.items.map(it => ({ id: it.id, text: it.text, confs: it.confs, scored: it.__scored || null })),
+    discoveredAxes: STATE.discoveredAxes || []
+  };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = '9hoch9_respos.json'; a.click(); URL.revokeObjectURL(url);
+}
+
+/* Auto‑fill sample content to speed testing */
+function autoFill(){
+  STATE.items.forEach((it, idx) => {
+    it.text = `Respo ${idx+1} sample ${(idx%7===0)?'example':''} ${(idx%11===0)?'test':''}`;
+    it.confs = [+(0.4 + Math.random()*0.6).toFixed(2), +(0.4 + Math.random()*0.6).toFixed(2), +(0.4 + Math.random()*0.6).toFixed(2)];
+    if(it._el) it._el.textContent = it.text.slice(0,6);
+  });
+  $('cellInfo').textContent = 'Auto‑Fill done.';
+}
+
+/* Button wiring */
+$('genGrid').onclick = () => {
+  const lvl = Number($('levelSelect').value);
+  STATE.level = lvl;
+  const { side, count } = gridSizeForLevel(lvl);
+  generateItemsForLevel(lvl);
+  renderGrid();
+  $('cellInfo').textContent = `Grid ${side}×${side} erzeugt (${STATE.items.length} Zellen).`;
 };
+$('autoFill').onclick = () => autoFill();
+$('discoverAxes').onclick = () => runDiscover();
+$('scoreAll').onclick = () => {
+  if(processing.timer) cancelAnimationFrame(processing.timer);
+  processing.index = 0;
+  scoreAllChunked(()=> { renderTop(); $('cellInfo').textContent = 'Scoring abgeschlossen.'; });
+};
+$('exportJSON').onclick = () => exportJSON();
+$('useMeKI').onchange = (e) => { STATE.useMeKI = e.target.checked; $('cellInfo').textContent = `meKI ${STATE.useMeKI ? 'aktiv' : 'deaktiviert'}`; };
 
-// ============================================================
-// 6. LOG
-// ============================================================
-function log(msg, type = 'info') {
-    const entry = document.createElement('div');
-    entry.className = 'entry';
-    const time = new Date().toLocaleTimeString();
-    const cls = type === 'ok' ? 'ok' : type === 'err' ? 'err' : type === 'warn' ? 'warn' :
-                type === 'tri' ? 'tri' : type === 'form' ? 'form' : type === 'quant' ? 'quant' :
-                type === 'syn' ? 'syn' : '';
-    entry.innerHTML = `<span class="time">[${time}]</span> <span class="msg ${cls}">${msg}</span>`;
-    logDiv.appendChild(entry);
-    logDiv.scrollTop = logDiv.scrollHeight;
-    while (logDiv.children.length > 200) logDiv.removeChild(logDiv.firstChild);
+/* Initialize default 9x9 */
+$('genGrid').click();
+
+/* If an external schnitt (schnitt.js or other modules) provide functions,
+   prefer them (e.g. external.schnitt.evalRespo etc.). This keeps backward compatibility. */
+if(external.schnitt){
+  console.info('External schnitt module loaded — delegating some functions if present.');
+  if(external.schnitt.evalRespo) evalRespo = external.schnitt.evalRespo;
+  if(external.schnitt.discoverAxes) discoverAxes = external.schnitt.discoverAxes;
+  if(external.schnitt.scoreSingle) scoreSingle = external.schnitt.scoreSingle;
 }
 
-// ============================================================
-// 7. TRIANGLE + SINK/SOURCE (SYN ENGINE)
-// ============================================================
-function makeTriangle(p1, p2, p3) {
-    return {
-        p1, p2, p3,
-        sideA: { a: p1, b: p2 },
-        sideB: { a: p2, b: p3 },
-        center: {
-            x: (p1.x + p2.x + p3.x) / 3,
-            y: (p1.y + p2.y + p3.y) / 3
-        }
-    };
-}
-
-function makeSink(sideA, opts = { radius: 35, strength: 150 }) {
-    return {
-        id: 'A-' + Date.now(),
-        pos: { x: (sideA.a.x + sideA.b.x) / 2, y: (sideA.a.y + sideA.b.y) / 2 },
-        radius: opts.radius,
-        strength: opts.strength,
-        energy: 0
-    };
-}
-
-function makeSource(sideB, opts = { radius: 8, emissionRate: 1.0, energy: 80 }) {
-    return {
-        id: 'B-' + Date.now(),
-        pos: {
-            x: (sideB.a.x + sideB.b.x) / 2 + (Math.random() - 0.5) * 30,
-            y: (sideB.a.y + sideB.b.y) / 2 + (Math.random() - 0.5) * 30
-        },
-        radius: opts.radius,
-        emissionRate: opts.emissionRate,
-        energy: opts.energy
-    };
-}
-
-function spawnParticle(source) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 0.6 + Math.random() * 1.5;
-    return {
-        pos: { x: source.pos.x, y: source.pos.y },
-        vel: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
-        mass: 1,
-        life: 12 + Math.random() * 25,
-        origin: source.id,
-        trail: []
-    };
-}
-
-// ============================================================
-// 8. SIMULATION STEP
-// ============================================================
-function simStep(dt) {
-    const speed = parseFloat(speedSelect.value) || 1;
-    dt = dt * speed;
-
-    // Emission
-    for (const src of state.sources) {
-        if (Math.random() < src.emissionRate * dt * 0.4) {
-            state.particles.push(spawnParticle(src));
-            src.energy -= 0.12;
-        }
-    }
-
-    // Update particles
-    const newParticles = [];
-    for (const p of state.particles) {
-        let fx = 0, fy = 0;
-        for (const s of state.sinks) {
-            const dx = s.pos.x - p.pos.x;
-            const dy = s.pos.y - p.pos.y;
-            const r2 = dx * dx + dy * dy + 0.01;
-            const r = Math.sqrt(r2);
-            const F = s.strength / r2;
-            fx += F * (dx / r);
-            fy += F * (dy / r);
-        }
-
-        const damping = 0.04;
-        p.vel.x += fx * dt * 2;
-        p.vel.y += fy * dt * 2;
-        p.vel.x *= (1 - damping);
-        p.vel.y *= (1 - damping);
-        p.pos.x += p.vel.x * dt * 80;
-        p.pos.y += p.vel.y * dt * 80;
-        p.life -= dt;
-
-        // Trail
-        p.trail.push({ x: p.pos.x, y: p.pos.y });
-        if (p.trail.length > 10) p.trail.shift();
-
-        // Absorption
-        let absorbed = false;
-        for (const s of state.sinks) {
-            const dx = s.pos.x - p.pos.x;
-            const dy = s.pos.y - p.pos.y;
-            const r = Math.sqrt(dx * dx + dy * dy);
-            if (r < Math.max(5, s.radius * 0.12)) {
-                s.energy += p.mass;
-                state.events.push({ type: 'absorbed', sinkId: s.id, time: Date.now() });
-                absorbed = true;
-                break;
-            }
-        }
-
-        if (p.life > 0 && !absorbed) newParticles.push(p);
-    }
-    state.particles = newParticles;
-
-    // Sink spawn stars
-    for (const s of state.sinks) {
-        if (s.energy > 25) {
-            s.energy -= 25;
-            const star = {
-                id: 'star-' + Date.now(),
-                pos: {
-                    x: s.pos.x + (Math.random() - 0.5) * 100,
-                    y: s.pos.y + (Math.random() - 0.5) * 100
-                },
-                energy: 10,
-                life: 40
-            };
-            state.stars.push(star);
-            state.events.push({ type: 'spawnStar', starId: star.id, time: Date.now() });
-            log(`⭐ Star gespawnt bei (${star.pos.x.toFixed(0)}, ${star.pos.y.toFixed(0)})`, 'warn');
-        }
-    }
-
-    // Update stars
-    state.stars = state.stars.filter(s => {
-        s.life -= dt;
-        return s.life > 0;
-    });
-
-    state.simTime += dt;
-}
-
-// ============================================================
-// 9. RENDER
-// ============================================================
-function render() {
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    // Hintergrund
-    const grad = ctx.createRadialGradient(w/2, h/2, 10, w/2, h/2, w/2);
-    grad.addColorStop(0, '#0a0a1a');
-    grad.addColorStop(1, '#000');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Grid
-    ctx.strokeStyle = '#0a0a1a';
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < w; x += 40) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
-    }
-    for (let y = 0; y < h; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
-    }
-
-    // Triangle
-    if (state.triangle) {
-        const t = state.triangle;
-        ctx.beginPath();
-        ctx.moveTo(t.p1.x, t.p1.y);
-        ctx.lineTo(t.p2.x, t.p2.y);
-        ctx.lineTo(t.p3.x, t.p3.y);
-        ctx.closePath();
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    }
-
-    // Stars
-    for (const s of state.stars) {
-        const r = 3 + s.energy * 0.2;
-        const grad2 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r);
-        grad2.addColorStop(0, '#ff6');
-        grad2.addColorStop(1, 'rgba(255,255,0,0)');
-        ctx.fillStyle = grad2;
-        ctx.beginPath();
-        ctx.arc(s.pos.x, s.pos.y, r, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Particles
-    for (const p of state.particles) {
-        // Trail
-        for (let i = 0; i < p.trail.length - 1; i++) {
-            const alpha = i / p.trail.length * 0.3;
-            ctx.strokeStyle = `rgba(0, 255, 255, ${alpha})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(p.trail[i].x, p.trail[i].y);
-            ctx.lineTo(p.trail[i+1].x, p.trail[i+1].y);
-            ctx.stroke();
-        }
-
-        // Partikel
-        const size = 2 + p.life * 0.04;
-        const grad3 = ctx.createRadialGradient(p.pos.x, p.pos.y, 0, p.pos.x, p.pos.y, size);
-        grad3.addColorStop(0, '#4ff');
-        grad3.addColorStop(1, 'rgba(0, 255, 255, 0)');
-        ctx.fillStyle = grad3;
-        ctx.beginPath();
-        ctx.arc(p.pos.x, p.pos.y, size, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Sinks (A)
-    for (const s of state.sinks) {
-        const r = s.radius * 0.2 + s.energy * 0.15;
-        const grad4 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, r + 10);
-        grad4.addColorStop(0, '#f44');
-        grad4.addColorStop(0.3, '#a22');
-        grad4.addColorStop(1, 'rgba(255,0,0,0)');
-        ctx.fillStyle = grad4;
-        ctx.beginPath();
-        ctx.arc(s.pos.x, s.pos.y, r + 10, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#f44';
-        ctx.font = '9px Consolas';
-        ctx.textAlign = 'center';
-        ctx.fillText(`A ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
-    }
-
-    // Sources (B)
-    for (const s of state.sources) {
-        const grad5 = ctx.createRadialGradient(s.pos.x, s.pos.y, 0, s.pos.x, s.pos.y, 15);
-        grad5.addColorStop(0, '#4f4');
-        grad5.addColorStop(1, 'rgba(0,255,0,0)');
-        ctx.fillStyle = grad5;
-        ctx.beginPath();
-        ctx.arc(s.pos.x, s.pos.y, 15, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#4f4';
-        ctx.font = '9px Consolas';
-        ctx.textAlign = 'center';
-        ctx.fillText(`B ${s.energy.toFixed(1)}`, s.pos.x, s.pos.y + 4);
-    }
-
-    // Stats
-    statsEl.textContent = `P: ${state.particles.length} | S: ${state.stars.length} | E: ${state.events.length}`;
-}
-
-// ============================================================
-// 10. FORM/QUANT/SYN/VECTOR ANALYSE
-// ============================================================
-function runAnalysis() {
-    try {
-        // FORM_CORE
-        const core = FORM_CORE || [];
-        const matrix = FORM_MATRIX ? FORM_MATRIX(core) : [];
-        const t = state.simTime || 0;
-        const engine = FORM_ENGINE ? FORM_ENGINE(matrix, t) : null;
-
-        state.formData = { core, matrix, engine };
-        log('📐 FORM_ENGINE ausgeführt', 'form');
-
-        // QUANT_CORE
-        if (engine && QUANT_CORE) {
-            const quant = QUANT_CORE(engine);
-            state.quantData = quant;
-            log(`🌀 QUANT_CORE: Energie=${quant.energy.toFixed(2)}, Stabilität=${quant.stability}`, 'quant');
-        }
-
-        // SYN_CORE (mit SYN-Engine-Daten)
-        if (SYN_CORE && engine) {
-            const mia = { fusion: 60 + Math.sin(t) * 20 };
-            const echo = { state: 'loud', resonance: 30 + Math.cos(t * 0.5) * 15 };
-            const syn = SYN_CORE(mia, echo, engine);
-            state.synData = syn;
-            log(`🔄 SYN_CORE: Lock=${syn.lock.toFixed(0)}, Stable=${syn.stable}`, 'syn');
-        }
-
-        // Vector
-        if (Vector) {
-            const v = new Vector(
-                Math.sin(t * 0.5) * 100,
-                Math.cos(t * 0.3) * 100,
-                Math.sin(t * 0.7) * 50
-            );
-            state.vectorData = {
-                x: v.x.toFixed(2),
-                y: v.y.toFixed(2),
-                z: v.z.toFixed(2),
-                magnitude: v.magnitude().toFixed(2)
-            };
-            log(`📐 VECTOR: magnitude=${state.vectorData.magnitude}`, 'form');
-        }
-
-        // Tabs updaten
-        updateTabContent('form', JSON.stringify({ matrix, engine }, null, 2));
-        updateTabContent('quant', JSON.stringify(state.quantData, null, 2));
-        updateTabContent('syn', JSON.stringify(state.synData, null, 2));
-        updateTabContent('vector', JSON.stringify(state.vectorData, null, 2));
-        updateTabContent('matrix', JSON.stringify(matrix, null, 2));
-
-    } catch (e) {
-        log(`❌ Analyse Fehler: ${e.message}`, 'err');
-    }
-}
-
-// ============================================================
-// 11. TABS
-// ============================================================
-let currentTab = 'log';
-const tabCache = {};
-
-function updateTabContent(tab, content) {
-    tabCache[tab] = content;
-    if (tab === currentTab) {
-        const contentDiv = document.getElementById('data-content');
-        if (tab === 'log') return;
-        contentDiv.innerHTML = `<pre>${typeof content === 'string' ? content : JSON.stringify(content, null, 2)}</pre>`;
-    }
-}
-
-document.querySelectorAll('#tabs button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTab = btn.dataset.tab;
-        const contentDiv = document.getElementById('data-content');
-
-        if (currentTab === 'log') return;
-
-        if (tabCache[currentTab]) {
-            contentDiv.innerHTML = `<pre>${typeof tabCache[currentTab] === 'string' ? tabCache[currentTab] : JSON.stringify(tabCache[currentTab], null, 2)}</pre>`;
-        } else {
-            contentDiv.innerHTML = `<pre>⏳ Keine Daten — führe zuerst Analyse aus</pre>`;
-        }
-    });
-});
-
-// ============================================================
-// 12. BOOT / STEP / RESET / INIT
-// ============================================================
-function initTriangle() {
-    const w = canvas.width, h = canvas.height;
-    const tri = makeTriangle(
-        { x: w * 0.15, y: h * 0.85 },
-        { x: w * 0.85, y: h * 0.85 },
-        { x: w * 0.5, y: h * 0.1 }
-    );
-    state.triangle = tri;
-
-    const strength = parseFloat(sinkStrengthInput.value) || 150;
-    state.sinks = [makeSink(tri.sideA, { strength })];
-    state.sources = [makeSource(tri.sideB)];
-    state.particles = [];
-    state.stars = [];
-    state.events = [];
-    state.simTime = 0;
-
-    log('🔺 Triangle initialisiert', 'tri');
-}
-
-function bootAll() {
-    log('🚀 BOOT ALL — Lade Module...', 'warn');
-    statusLed.className = 'busy';
-
-    initTriangle();
-
-    // Module laden
-    Object.keys(MODULES).forEach((key, i) => {
-        setTimeout(() => {
-            MODULES[key].loaded = true;
-            const dot = document.getElementById(`mod-${key}`);
-            if (dot) dot.className = 'dot loaded';
-            log(`✅ ${MODULES[key].name} geladen`, 'ok');
-        }, 150 + i * 120);
-    });
-
-    setTimeout(() => {
-        statusLed.className = 'on';
-        state.running = true;
-        state.lastTime = performance.now();
-        log('✅ SYSTEM BEREIT — Simulation läuft', 'ok');
-        runAnalysis();
-        loopFrame(performance.now());
-    }, 150 + Object.keys(MODULES).length * 120 + 400);
-}
-
-function stepSim() {
-    log('⏭ STEP — Nächster Schritt', 'warn');
-    simStep(0.5);
-    render();
-    runAnalysis();
-    state.cycle++;
-    cycleCountEl.textContent = `Zyklus ${state.cycle}`;
-}
-
-function resetAll() {
-    state.running = false;
-    state.particles = [];
-    state.sinks = [];
-    state.sources = [];
-    state.stars = [];
-    state.events = [];
-    state.simTime = 0;
-    state.cycle = 0;
-    state.triangle = null;
-    state.formData = null;
-    state.quantData = null;
-    state.synData = null;
-    state.vectorData = null;
-    cycleCountEl.textContent = 'Zyklus 0';
-    statusLed.className = 'off';
-
-    Object.keys(MODULES).forEach(key => {
-        MODULES[key].loaded = false;
-        const dot = document.getElementById(`mod-${key}`);
-        if (dot) dot.className = 'dot';
-    });
-
-    ctx.clearRect(
+</script>
+</body>
+</html>
