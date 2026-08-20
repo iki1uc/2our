@@ -1,3 +1,5 @@
+// AIR6D_MOVE.js – optimiert & stabil
+
 import { VEC_CORE } from "./VEC_CORE.js";
 import { FLX_CORE } from "./FLX_CORE.js";
 import { FORM_CORE } from "./FORM_CORE.js";
@@ -10,11 +12,7 @@ export function AIR6D_MOVE(input) {
     const { ion, echo, mia, formCore, t = 0 } = input;
 
     // Stage 0 – VEC
-    const vec = VEC_CORE({
-        pulse: ion.pulse,
-        warp: ion.warp,
-        charge: ion.charge
-    });
+    const vec = VEC_CORE(ion);
 
     // Stage 1 – FLX
     const flx = FLX_CORE({
