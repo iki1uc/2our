@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HY·PE·PER · FOGth · 3×3 · Time Engine</title>
+<title>HY·PE·PER · RUN8 · AIR6D · FOGth</title>
 
 <style>
   body {
@@ -35,6 +35,44 @@
   }
   #info .mc { color: #ffaa00; font-weight: bold; }
   #info .fly { color: #00ccff; font-weight: bold; }
+  #run8-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #111;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+  }
+  #run8-btn:hover {
+    background: #0f0;
+    color: #000;
+    box-shadow: 0 0 30px rgba(0,255,0,0.1);
+  }
+  #output {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    border: 1px solid #1a1a2a;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 10px;
+    color: #8af;
+    max-width: 300px;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    z-index: 10;
+    display: none;
+  }
+  #output.show { display: block; }
 </style>
 </head>
 
@@ -48,13 +86,188 @@
   3×3 · G.root · ID = W · <span style="color:#0f0;">✦ TIME ENGINE</span>
 </div>
 
+<button id="run8-btn">▶ RUN 8</button>
+<div id="output">➡️ Klick auf RUN 8 …</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "./FORM_CORE.js": "./FORM_CORE.js",
+    "./FORM_ENGINE.js": "./FORM_ENGINE.js",
+    "./FORM_MATRIX.js": "./FORM_MATRIX.js",
+    "./VEC_CORE.js": "./VEC_CORE.js",
+    "./FLX_CORE.js": "./FLX_CORE.js",
+    "./syn.js": "./syn.js",
+    "./PIPELINE_RUN8.js": "./PIPELINE_RUN8.js",
+    "./AIR6D_MOVE.js": "./AIR6D_MOVE.js"
+  }
+}
+</script>
+
+<script type="module">
+// ─── 1. IMPORTS ──────────────────────────────────────────
+import { FORM_CORE } from "./FORM_CORE.js";
+import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
+import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
+
+// ─── 2. DOM ──────────────────────────────────────────────
+const canvas = document.getElementById('fogth');
+const ctx = canvas.getContext('2d');
+const output = document.getElementById('output');
+const run8Btn = document.getElementById('run8-btn');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ─── 3. HY·PE·PER ENGINE (integriert) ──────────────────
+const HYPEPER = {
+
+  // 3×3 Matrix
+  matrix: [
+    [{ axis: 'A' }, { axis: 'B' }, { axis: 'C' }],
+    [{ axis: 'B' }, { axis: 'C' }, { axis: 'A' }],
+    [{ axis: 'C' }, { axis: 'A' }, { axis: 'B' }]
+  ],
+
+  render(ctx, canvas, time) {
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const radius = 140 + Math.sin(time * 0.3) * 20;
+
+    // Verbindungen
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        for (let k = 0; k < 3; k++) {
+          if (k === j) continue;
+          const x1 = cx + Math.cos(time + (i + j)) * radius * (i + 1);
+          const y1 = cy + Math.sin(time + (i + j)) * radius * (j + 1);
+          const x2 = cx + Math.cos(time + (i + k)) * radius * (i + 1);
+          const y2 = cy + Math.sin(time + (i + k)) * radius * (k + 1);
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = `rgba(0, 255, 0, 0.04)`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // 9 Zellen
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const cell = this.matrix[i][j];
+        const flux = 0.5 + 0.5 * Math.sin(time * 0.5 + i * 1.3 + j * 0.7);
+        const size = 18 + flux * 12;
+        const x = cx + Math.cos(time + (i + j)) * radius * (i + 1);
+        const y = cy + Math.sin(time + (i + j)) * radius * (j + 1);
+
+        // Glow
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, size + 10);
+        grad.addColorStop(0, `rgba(0, 255, 0, ${0.1 + flux * 0.2})`);
+        grad.addColorStop(1, 'rgba(0, 255, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, size + 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Kreis
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        const colors = ['#ffaa00', '#00ccff', '#ff00aa'];
+        ctx.strokeStyle = colors[(i + j) % 3];
+        ctx.lineWidth = 1.5 + flux * 1.5;
+        ctx.shadowColor = '#0f0';
+        ctx.shadowBlur = 10 + flux * 10;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.fillStyle = `rgb(200, 255, ${150 + flux * 100})`;
+        ctx.font = `${14 + flux * 6}px monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cell.axis, x, y + 2);
+      }
+    }
+
+    // Tornado-Spirale
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(0, 255, 200, 0.1)`;
+    ctx.lineWidth = 1;
+    for (let t = 0; t < 200; t++) {
+      const tx = cx + Math.cos(time + t * 0.08) * (t * 1.2 + Math.sin(t * 0.05 + time * 2) * 30);
+      const ty = cy + Math.sin(time + t * 0.08) * (t * 1.2 + Math.sin(t * 0.05 + time * 2) * 30);
+      ctx.lineTo(tx, ty);
+    }
+    ctx.stroke();
+
+    // Zeit-Pulse
+    for (let p = 0; p < 5; p++) {
+      const phase = (p / 5) * Math.PI * 2 + time * 0.5;
+      const r = 50 + Math.sin(phase) * 30;
+      const px = cx + Math.cos(phase) * r;
+      const py = cy + Math.sin(phase) * r;
+      ctx.beginPath();
+      ctx.arc(px, py, 3 + Math.sin(phase + time) * 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0, 255, 200, ${0.3 + Math.sin(phase) * 0.2})`;
+      ctx.fill();
+    }
+  }
+};
+
+// ─── 4. RUN8 / AIR6D ─────────────────────────────────────
+const ion = { pulse: 0.8, warp: 0.3, charge: 0.5 };
+const echo = { resonance: 0.7, state: "loud", warp: 0.2 };
+const mia = { fusion: 60, pulse: 0.6, charge: 0.4 };
+
+function run8() {
+  try {
+    const input = {
+      ion, echo, mia,
+      formCore: FORM_CORE || [],
+      t: performance.now() / 1000
+    };
+
+    const run8Result = PIPELINE_RUN8(input);
+    const air6dResult = AIR6D_MOVE(input);
+
+    output.textContent = JSON.stringify({
+      run8: {
+        mode: run8Result.mode,
+        time: run8Result.time,
+        stage0: run8Result.stage0,
+        stage1: run8Result.stage1,
+        stage2: run8Result.stage2,
+        stage8: run8Result.stage8
+      },
+      air6d: {
+        mode: air6dResult.mode,
+        time: air6dResult.time,
+        vector: air6dResult.vector,
+        flex: air6dResult.flex,
+        form: air6dResult.form,
+        sync: air6dResult.sync
+      }
+    }, null, 2);
+    output.className = 'show';
+
+  } catch (e) {
+    output.textContent = `❌ FEHLER: ${e.message}`;
+    output.className = 'show';
+    console.error(e);
+  }
+}
+
+run8Btn.addEventListener('click', run8);
+
+// ─── 5. CANVAS LOOP ──────────────────────────────────────
+let time = 0;
+let speed = 0.03;
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // HY·PE·PER Engine rendern
   HYPEPER.render(ctx, canvas, time);
-
   time += speed;
   requestAnimationFrame(draw);
 }
@@ -69,57 +282,3 @@ window.addEventListener('resize', () => {
 
 </body>
 </html>
-99999999999999999999
-<script type="module">
-
-// ─── 1) MODULE IMPORTIEREN ─────────────────────────────
-
-import { FORM_CORE } from "./FORM_CORE.js";
-import { AIR6D_MOVE } from "./AIR6D_MOVE.js";
-import { PIPELINE_RUN8 } from "./PIPELINE_RUN8.js";
-
-// ─── 2) ENGINE-EINGABEN (GLOBAL) ───────────────────────
-
-const ion = { pulse: 0.8, warp: 0.3, charge: 0.5 };
-const echo = { resonance: 0.7, state: "loud", warp: 0.2 };
-const mia = { fusion: 60, pulse: 0.6, charge: 0.4 };
-
-// ─── 3) RUN 8 – PIPELINE + AIR6D ───────────────────────
-
-function RUN8() {
-
-    const input = {
-        ion,
-        echo,
-        mia,
-        formCore: FORM_CORE,
-        t: performance.now() / 1000
-    };
-
-    const run8 = PIPELINE_RUN8(input);
-    console.log("RUN8:", run8);
-
-    const air6d = AIR6D_MOVE(input);
-    console.log("AIR6D:", air6d);
-}
-
-// ─── 4) BUTTON BINDING ──────────────────────────────────
-
-document.querySelector("#run8").addEventListener("click", RUN8);
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // HY·PE·PER Engine rendern
-  HYPEPER.render(ctx, canvas, time);
-
-  time += speed;
-  requestAnimationFrame(draw);
-}
-
-draw();
-
-window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
-</script>
